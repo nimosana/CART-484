@@ -1,2 +1,2 @@
 # CART-484
-Group with Trish and Jolene
+Group with Trisha and Jolene
