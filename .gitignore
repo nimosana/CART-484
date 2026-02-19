@@ -1,0 +1,38 @@
+# Build folders
+Builds/
+build/
+bin/
+out/
+Binaries/
+Intermediate/
+DerivedData/
+
+# Visual Studio
+.vs/
+*.VC.db
+*.VC.opendb
+*.sln
+*.vcxproj.user
+
+# Compiled
+*.exe
+*.dll
+*.obj
+*.pdb
+*.lib
+*.ilk
+*.app
+
+# macOS
+.DS_Store
+
+# JUCE cache
+JuceLibraryCode/AppConfig.h
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake-build*/
+
+# Audio temp
+*.wav~
