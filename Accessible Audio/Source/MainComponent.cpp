@@ -103,7 +103,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 //==============================================================================
 juce::StringArray MainComponent::getMenuBarNames()
 {
-    return { "File", "Playback" };
+    return { "File", "Playback", "Edit"};
 }
 
 juce::PopupMenu MainComponent::getMenuForIndex(
@@ -124,7 +124,9 @@ juce::PopupMenu MainComponent::getMenuForIndex(
     {
         menu.addItem(3,
             transportSource.isPlaying() ? "Stop" : "Play");
-        menu.addSeparator();
+    }
+    else if (menuIndex == 2) // Edit
+    {
         menu.addItem(5, "Gain 0.5x", true, std::abs(gain - 0.5f) < 0.01f);
         menu.addItem(6, "Gain 1.0x", true, std::abs(gain - 1.0f) < 0.01f);
         menu.addItem(7, "Gain 2.0x", true, std::abs(gain - 2.0f) < 0.01f);
