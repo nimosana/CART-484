@@ -3,13 +3,14 @@
 //==============================================================================
 MainComponent::MainComponent()
 {
-    setSize(600, 400);
+    setSize(400, 350);
 
     formatManager.registerBasicFormats();
 
     menuBar = std::make_unique<juce::MenuBarComponent>(this);
     addAndMakeVisible(menuBar.get());
-
+    if (menuBar)
+        menuBar->setBounds(0, 0, getWidth(), 25);
     setWantsKeyboardFocus(true);
     addKeyListener(this);
 
