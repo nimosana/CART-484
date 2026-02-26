@@ -61,51 +61,42 @@ void MainComponent::releaseResources()
 //==============================================================================
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
-    // Digit scrub (existing functionality)
+    // Digit scrub
     if (readerSource != nullptr)
     {
-        juce::juce_wchar c = key.getTextCharacter();
+        auto c = key.getTextCharacter();
         if (c >= '0' && c <= '9')
         {
-            int digit = c - '0';
-            double length = transportSource.getLengthInSeconds();
-            transportSource.setPosition((digit / 10.0) * length);
+            transportSource.setPosition((c - '0') / 10.0 * transportSource.getLengthInSeconds());
             return true;
         }
     }
 
-    // Keyboard menu navigation
-    if (key == juce::KeyPress::escapeKey) // Close any open menu
-    {
-        activeMenuIndex = -1;
-        return true;
-    }
+    // Space toggles playback
     if (key == juce::KeyPress::spaceKey)
     {
         togglePlayback();
         return true;
     }
-    if (key == juce::KeyPress('f', juce::ModifierKeys::altModifier, 0))
-    {
-        activeMenuIndex = 0; // File
-        activePopup = getMenuForIndex(activeMenuIndex, {});
-        activePopup.showMenuAsync(juce::PopupMenu::Options(),
-            [this](int result) { if (result != 0) menuItemSelected(result, 0); });
-        return true;
-    }
 
-    if (key == juce::KeyPress('p', juce::ModifierKeys::altModifier, 0))
+    // Alt+F / Alt+P opens menus
+    if (key.getModifiers().isAltDown())
     {
-        activeMenuIndex = 1; // Playback
-        activePopup = getMenuForIndex(activeMenuIndex, {});
-        activePopup.showMenuAsync(juce::PopupMenu::Options(),
-            [this](int result) { if (result != 0) menuItemSelected(result, 0); });
-        return true;
+        char c = (char)std::tolower(key.getTextCharacter());
+        if (c == 'f')
+        {
+            if (menuBar) menuBar->showMenu(0);
+            return true;
+        }
+        if (c == 'p')
+        {
+            if (menuBar) menuBar->showMenu(1);
+            return true;
+        }
     }
 
     return false;
 }
-
 //==============================================================================
 juce::StringArray MainComponent::getMenuBarNames()
 {
