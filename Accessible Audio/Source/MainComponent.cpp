@@ -5,18 +5,15 @@ MainComponent::MainComponent()
 {
     setSize(600, 400);
 
-    // Register WAV support
     formatManager.registerBasicFormats();
 
-    // Buttons
-    addAndMakeVisible(importButton);
-    addAndMakeVisible(playButton);
+    menuBar = std::make_unique<juce::MenuBarComponent>(this);
+    addAndMakeVisible(menuBar.get());
 
-    importButton.addListener(this);
-    playButton.addListener(this);
+    setWantsKeyboardFocus(true);
+    addKeyListener(this);
 
-    // Audio device
-    setAudioChannels(0, 2); // no input, stereo output
+    setAudioChannels(0, 2);
 }
 
 MainComponent::~MainComponent()
@@ -27,33 +24,26 @@ MainComponent::~MainComponent()
 //==============================================================================
 void MainComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-    g.setColour(juce::Colours::white);
-    g.setFont(16.0f);
-    g.drawText("Accessible Audio Editor Prototype",
-        getLocalBounds().reduced(10),
-        juce::Justification::topLeft,
-        true);
+    g.fillAll(getLookAndFeel().findColour(
+        juce::ResizableWindow::backgroundColourId));
 }
 
 void MainComponent::resized()
 {
-    importButton.setBounds(50, 80, 200, 40);
-    playButton.setBounds(50, 140, 200, 40);
+    if (menuBar)
+        menuBar->setBounds(0, 0, getWidth(), 25);
 }
 
 //==============================================================================
-// AUDIO
-
 void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
-void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
+void MainComponent::getNextAudioBlock(
+    const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    if (readerSource.get() == nullptr)
+    if (readerSource == nullptr)
     {
         bufferToFill.clearActiveBufferRegion();
         return;
@@ -68,60 +58,123 @@ void MainComponent::releaseResources()
 }
 
 //==============================================================================
-// BUTTONS
-
-void MainComponent::buttonClicked(juce::Button* button)
+bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
-    if (button == &importButton)
+    if (readerSource == nullptr)
+        return false;
+
+    juce::juce_wchar c = key.getTextCharacter();
+
+    if (c >= '0' && c <= '9')
     {
-        auto chooser = std::make_shared<juce::FileChooser>(
-            "Select a WAV file...",
-            juce::File{},
-            "*.wav"
-        );
+        int digit = c - '0';
+        double length = transportSource.getLengthInSeconds();
+        double newPosition = (digit / 10.0) * length;
 
-        chooser->launchAsync(juce::FileBrowserComponent::openMode |
-            juce::FileBrowserComponent::canSelectFiles,
-            [this, chooser](const juce::FileChooser& fc)
-            {
-                juce::File file = fc.getResult();   // explicit type avoids template confusion
-
-                if (!file.existsAsFile())
-                    return;
-
-                // Stop and clear previous audio safely
-                transportSource.stop();
-                transportSource.setSource(nullptr);
-                readerSource.reset();
-
-                // Create reader
-                std::unique_ptr<juce::AudioFormatReader> reader(
-                    formatManager.createReaderFor(file)
-                );
-
-                if (reader == nullptr)
-                    return;
-
-                const double sampleRate = reader->sampleRate;
-
-                // Transfer ownership of reader → AudioFormatReaderSource
-                auto newSource = std::make_unique<juce::AudioFormatReaderSource>(
-                    reader.release(), true
-                );
-
-                transportSource.setSource(newSource.get(), 0, nullptr, sampleRate);
-
-                // Transfer ownership of newSource → readerSource member
-                readerSource.reset(newSource.release());
-            });
+        transportSource.setPosition(newPosition);
+        return true;
     }
 
+    return false;
+}
 
-    else if (button == &playButton)
+//==============================================================================
+juce::StringArray MainComponent::getMenuBarNames()
+{
+    return { "File", "Playback" };
+}
+
+juce::PopupMenu MainComponent::getMenuForIndex(
+    int menuIndex,
+    const juce::String&)
+{
+    juce::PopupMenu menu;
+
+    if (menuIndex == 0) // File
     {
-        if (transportSource.isPlaying())
+        menu.addItem(1, "Import WAV...");
+        menu.addSeparator();
+        menu.addItem(2, "Quit");
+    }
+    else if (menuIndex == 1) // Playback
+    {
+        menu.addItem(3,
+            transportSource.isPlaying() ? "Stop" : "Play");
+    }
+
+    return menu;
+}
+
+void MainComponent::menuItemSelected(int menuItemID, int)
+{
+    switch (menuItemID)
+    {
+    case 1:
+        importFile();
+        break;
+
+    case 2:
+        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        break;
+
+    case 3:
+        togglePlayback();
+        break;
+    }
+}
+
+//==============================================================================
+void MainComponent::importFile()
+{
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Select a WAV file...",
+        juce::File{},
+        "*.wav");
+
+    chooser->launchAsync(
+        juce::FileBrowserComponent::openMode |
+        juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            juce::File file = fc.getResult();
+
+            if (!file.existsAsFile())
+                return;
+
+            currentFile = file;
+
             transportSource.stop();
-        else
-            transportSource.start();
-    }
+            transportSource.setSource(nullptr);
+            readerSource.reset();
+
+            std::unique_ptr<juce::AudioFormatReader> reader(
+                formatManager.createReaderFor(file));
+
+            if (reader == nullptr)
+                return;
+
+            auto newSource =
+                std::make_unique<juce::AudioFormatReaderSource>(
+                    reader.release(), true);
+
+            transportSource.setSource(
+                newSource.get(),
+                0,
+                nullptr,
+                newSource->getAudioFormatReader()->sampleRate);
+
+            readerSource.reset(newSource.release());
+        });
+}
+
+//==============================================================================
+void MainComponent::togglePlayback()
+{
+    if (readerSource == nullptr)
+        return;
+
+    if (transportSource.isPlaying())
+        transportSource.stop();
+    else
+        transportSource.start();
 }

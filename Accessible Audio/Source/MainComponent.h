@@ -2,7 +2,8 @@
 #include <JuceHeader.h>
 
 class MainComponent : public juce::AudioAppComponent,
-    public juce::Button::Listener
+    public juce::KeyListener,
+    public juce::MenuBarModel
 {
 public:
     MainComponent();
@@ -16,18 +17,26 @@ public:
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
 
-    // Button
-    void buttonClicked(juce::Button* button) override;
+    // Keyboard
+    bool keyPressed(const juce::KeyPress& key, juce::Component*) override;
+
+    // Menu
+    juce::StringArray getMenuBarNames() override;
+    juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String&) override;
+    void menuItemSelected(int menuItemID, int) override;
 
 private:
-    // Buttons
-    juce::TextButton importButton{ "Import WAV" };
-    juce::TextButton playButton{ "Play" };
+    void importFile();
+    void togglePlayback();
+
+    std::unique_ptr<juce::MenuBarComponent> menuBar;
 
     // Audio
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;
+
+    juce::File currentFile;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
