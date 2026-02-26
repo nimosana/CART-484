@@ -189,8 +189,7 @@ void MainComponent::importFile()
 //==============================================================================
 void MainComponent::togglePlayback()
 {
-    if (readerSource == nullptr)
-        return;
+    if (readerSource == nullptr) return;
 
     if (transportSource.isPlaying())
         transportSource.stop();
