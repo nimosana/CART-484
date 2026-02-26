@@ -43,6 +43,8 @@ private:
     juce::File currentFile;
 
     float gain = 1.0f;
+    float gainStep = 0.1f;
+    bool gainEditMode = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

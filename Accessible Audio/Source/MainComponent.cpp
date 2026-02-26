@@ -27,6 +27,19 @@ void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(
         juce::ResizableWindow::backgroundColourId));
+
+    g.setColour(juce::Colours::white);
+    g.setFont(14.0f);
+
+    juce::String info;
+    info << "Gain: " << juce::String(gain, 2) << "x";
+    info << "   Step: " << juce::String(gainStep, 2);
+    if (gainEditMode)
+        info << "   (Use arrow keys to adjust)";
+
+    auto bounds = getLocalBounds().reduced(8, 8);
+    g.drawFittedText(info, bounds.removeFromBottom(24),
+        juce::Justification::centredLeft, 1);
 }
 
 void MainComponent::resized()
@@ -82,6 +95,35 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         return true;
     }
 
+    // Gain edit mode: arrow keys adjust gain and step
+    if (gainEditMode)
+    {
+        if (key.getKeyCode() == juce::KeyPress::upKey)
+        {
+            gain = juce::jlimit(0.0f, 4.0f, gain + gainStep);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::downKey)
+        {
+            gain = juce::jlimit(0.0f, 4.0f, gain - gainStep);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::rightKey)
+        {
+            gainStep = juce::jlimit(0.01f, 1.0f, gainStep * 2.0f);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::leftKey)
+        {
+            gainStep = juce::jlimit(0.01f, 1.0f, gainStep * 0.5f);
+            repaint();
+            return true;
+        }
+    }
+
     // Alt+F / Alt+P opens menus
     if (key.getModifiers().isAltDown())
     {
@@ -127,9 +169,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(
     }
     else if (menuIndex == 2) // Edit
     {
-        menu.addItem(5, "Gain 0.5x", true, std::abs(gain - 0.5f) < 0.01f);
-        menu.addItem(6, "Gain 1.0x", true, std::abs(gain - 1.0f) < 0.01f);
-        menu.addItem(7, "Gain 2.0x", true, std::abs(gain - 2.0f) < 0.01f);
+        menu.addItem(5, "Adjust Gain (arrow keys)", true, gainEditMode);
     }
 
     return menu;
@@ -156,15 +196,8 @@ void MainComponent::menuItemSelected(int menuItemID, int)
         break;
 
     case 5:
-        gain = 0.5f;
-        break;
-
-    case 6:
-        gain = 1.0f;
-        break;
-
-    case 7:
-        gain = 2.0f;
+        gainEditMode = !gainEditMode;
+        repaint();
         break;
     }
 }
