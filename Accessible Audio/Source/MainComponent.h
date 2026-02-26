@@ -29,6 +29,7 @@ private:
 
     void importFile();
     void togglePlayback();
+    void exportModifiedFile();
 
     // Track menu navigation
     int activeMenuIndex = -1;
@@ -40,6 +41,8 @@ private:
     juce::AudioTransportSource transportSource;
 
     juce::File currentFile;
+
+    float gain = 1.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
