@@ -26,11 +26,14 @@ public:
     void menuItemSelected(int menuItemID, int) override;
 
 private:
+
     void importFile();
     void togglePlayback();
 
+    // Track menu navigation
+    int activeMenuIndex = -1;
+    juce::PopupMenu activePopup;
     std::unique_ptr<juce::MenuBarComponent> menuBar;
-
     // Audio
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;

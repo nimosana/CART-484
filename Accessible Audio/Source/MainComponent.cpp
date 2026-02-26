@@ -60,18 +60,45 @@ void MainComponent::releaseResources()
 //==============================================================================
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
-    if (readerSource == nullptr)
-        return false;
-
-    juce::juce_wchar c = key.getTextCharacter();
-
-    if (c >= '0' && c <= '9')
+    // Digit scrub (existing functionality)
+    if (readerSource != nullptr)
     {
-        int digit = c - '0';
-        double length = transportSource.getLengthInSeconds();
-        double newPosition = (digit / 10.0) * length;
+        juce::juce_wchar c = key.getTextCharacter();
+        if (c >= '0' && c <= '9')
+        {
+            int digit = c - '0';
+            double length = transportSource.getLengthInSeconds();
+            transportSource.setPosition((digit / 10.0) * length);
+            return true;
+        }
+    }
 
-        transportSource.setPosition(newPosition);
+    // Keyboard menu navigation
+    if (key == juce::KeyPress::escapeKey) // Close any open menu
+    {
+        activeMenuIndex = -1;
+        return true;
+    }
+    if (key == juce::KeyPress::spaceKey)
+    {
+        togglePlayback();
+        return true;
+    }
+    if (key == juce::KeyPress('f', juce::ModifierKeys::altModifier, 0))
+    {
+        activeMenuIndex = 0; // File
+        activePopup = getMenuForIndex(activeMenuIndex, {});
+        activePopup.showMenuAsync(juce::PopupMenu::Options(),
+            [this](int result) { if (result != 0) menuItemSelected(result, 0); });
+        return true;
+    }
+
+    if (key == juce::KeyPress('p', juce::ModifierKeys::altModifier, 0))
+    {
+        activeMenuIndex = 1; // Playback
+        activePopup = getMenuForIndex(activeMenuIndex, {});
+        activePopup.showMenuAsync(juce::PopupMenu::Options(),
+            [this](int result) { if (result != 0) menuItemSelected(result, 0); });
         return true;
     }
 
@@ -157,7 +184,7 @@ void MainComponent::importFile()
                 std::make_unique<juce::AudioFormatReaderSource>(
                     reader.release(), true);
 
-            transportSource.setSource(
+            transportSource.setSource(  
                 newSource.get(),
                 0,
                 nullptr,
