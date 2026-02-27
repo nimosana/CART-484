@@ -9,9 +9,12 @@ MainComponent::MainComponent()
 
     menuBar = std::make_unique<juce::MenuBarComponent>(this);
     addAndMakeVisible(menuBar.get());
-    if (menuBar)
+    if (menuBar) {
+        menuBar->setModel(this);
         menuBar->setBounds(0, 0, getWidth(), 25);
+    }
     setWantsKeyboardFocus(true);
+
     addKeyListener(this);
 
     setAudioChannels(0, 2);
@@ -94,7 +97,23 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         togglePlayback();
         return true;
     }
+    // Tab cycles through menus
+    if (key == juce::KeyPress::tabKey)
+    {
+        if (activeMenuIndex == -1)
+            activeMenuIndex = 0;
+        else
+            activeMenuIndex = (activeMenuIndex + 1) % getMenuBarNames().size();
 
+        if (true)
+            menuBar->showMenu(activeMenuIndex); // this is required; no “highlight only” possible
+
+        return true;
+    }
+    if (scrubMode)
+    {
+
+    }
     // Gain edit mode: arrow keys adjust gain and step
     if (gainEditMode)
     {
@@ -138,6 +157,11 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             if (menuBar) menuBar->showMenu(1);
             return true;
         }
+        if (c == 'e')
+        {
+            if (menuBar) menuBar->showMenu(2);
+            return true;
+        }
     }
 
     return false;
@@ -156,20 +180,21 @@ juce::PopupMenu MainComponent::getMenuForIndex(
 
     if (menuIndex == 0) // File
     {
-        menu.addItem(1, "Import WAV...");
+        menu.addItem(1, "Import WAV");
         menu.addSeparator();
-        menu.addItem(4, "Export Modified WAV...");
+        menu.addItem(2, "Export Modified WAV");
         menu.addSeparator();
-        menu.addItem(2, "Quit");
+        menu.addItem(3, "Quit");
     }
     else if (menuIndex == 1) // Playback
     {
-        menu.addItem(3,
+        menu.addItem(4,
             transportSource.isPlaying() ? "Stop" : "Play");
+        menu.addItem(5, "Precise Scrubbing (arrow keys)", true, scrubMode);
     }
     else if (menuIndex == 2) // Edit
     {
-        menu.addItem(5, "Adjust Gain (arrow keys)", true, gainEditMode);
+        menu.addItem(6, "Adjust Gain (arrow keys)", true, gainEditMode);
     }
 
     return menu;
@@ -182,20 +207,20 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 1:
         importFile();
         break;
-
     case 2:
-        juce::JUCEApplication::getInstance()->systemRequestedQuit();
-        break;
-
-    case 3:
-        togglePlayback();
-        break;
-
-    case 4:
         exportModifiedFile();
         break;
-
+    case 3:
+        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        break;
+    case 4:
+        togglePlayback();
+        break;
     case 5:
+        scrubMode = !scrubMode;
+        repaint();
+        break;
+    case 6:
         gainEditMode = !gainEditMode;
         repaint();
         break;
@@ -206,7 +231,7 @@ void MainComponent::menuItemSelected(int menuItemID, int)
 void MainComponent::importFile()
 {
     auto chooser = std::make_shared<juce::FileChooser>(
-        "Select a WAV file...",
+        "Select a WAV file",
         juce::File{},
         "*.wav");
 
@@ -263,7 +288,7 @@ void MainComponent::exportModifiedFile()
         return;
 
     auto chooser = std::make_shared<juce::FileChooser>(
-        "Export modified WAV file...",
+        "Export modified WAV file",
         currentFile.getSiblingFile(currentFile.getFileNameWithoutExtension() + "_modified"),
         "*.wav");
 
