@@ -80,6 +80,8 @@ void MainComponent::releaseResources()
 //==============================================================================
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
+	char c = (char)std::tolower(key.getTextCharacter());
+
 	// Digit scrub
 	if (readerSource != nullptr)
 	{
@@ -98,7 +100,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 		return true;
 	}
 	// Tab cycles through menus
-	if (key == juce::KeyPress::tabKey)
+	else if (key == juce::KeyPress::tabKey)
 	{
 		if (activeMenuIndex == -1)
 			activeMenuIndex = 0;
@@ -110,7 +112,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 
 		return true;
 	}
-	if (scrubMode)
+	if (true)
 	{
 		double scrubAmount = key.getModifiers().isCtrlDown() ? 5.0 : 0.25;
 		double currentPos = transportSource.getCurrentPosition();
@@ -152,7 +154,6 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 	// Alt+F / Alt+P opens menus
 	if (key.getModifiers().isAltDown())
 	{
-		char c = (char)std::tolower(key.getTextCharacter());
 		if (c == 'f')
 		{
 			if (menuBar) menuBar->showMenu(0);
@@ -169,7 +170,6 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 			return true;
 		}
 	}
-
 	return false;
 }
 //==============================================================================
@@ -196,14 +196,11 @@ juce::PopupMenu MainComponent::getMenuForIndex(
 	{
 		menu.addItem(4,
 			transportSource.isPlaying() ? "Stop" : "Play");
-		menu.addItem(5, "Precise Scrubbing (arrow keys)", true, scrubMode);
-		gainEditMode = false;
+		//menu.addItem(5, "Precise Scrubbing (arrow keys)", true, scrubMode);
 	}
 	else if (menuIndex == 2) // Edit
 	{
-		menu.addItem(6, "Adjust Gain (arrow keys)", true, gainEditMode);
-		scrubMode = false;
-
+		menu.addItem(5, "Adjust Gain (arrow keys)", true, gainEditMode);
 	}
 
 	return menu;
@@ -226,10 +223,6 @@ void MainComponent::menuItemSelected(int menuItemID, int)
 		togglePlayback();
 		break;
 	case 5:
-		scrubMode = !scrubMode;
-		repaint();
-		break;
-	case 6:
 		gainEditMode = !gainEditMode;
 		repaint();
 		break;
