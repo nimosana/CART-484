@@ -186,9 +186,9 @@ juce::PopupMenu MainComponent::getMenuForIndex(
 
 	if (menuIndex == 0) // File
 	{
-		menu.addItem(1, "Import WAV");
+		menu.addItem(1, "Open WAV");
 		menu.addSeparator();
-		menu.addItem(2, "Export Modified WAV");
+		menu.addItem(2, "Save Modified WAV");
 		menu.addSeparator();
 		menu.addItem(3, "Quit");
 	}
