@@ -98,6 +98,31 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 			repaint();
 			return true;
 		}
+        
+        // announce time
+            else if (c == 't')
+            {
+                double currentPos = transportSource.getCurrentPosition();
+                double totalLength = transportSource.getLengthInSeconds();
+
+                int currentMins = (int)(currentPos / 60);
+                int currentSecs = (int)(currentPos) % 60;
+
+                juce::String announcement;
+                announcement
+                             << currentMins << " min " << currentSecs << " sec "
+                             ;
+
+                juce::AccessibilityHandler::postAnnouncement(
+                    announcement,
+                    juce::AccessibilityHandler::AnnouncementPriority::high
+                );
+
+                return true;
+            }
+        
+        
+        
 		if (c == 'l')
 		{
 			lowPassEnabled = !lowPassEnabled;
