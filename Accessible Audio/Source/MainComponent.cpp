@@ -82,7 +82,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
 	char c = (char)std::tolower(key.getTextCharacter());
 	bool ctrlDown = key.getModifiers().isCtrlDown();
-
+	bool altDown = key.getModifiers().isAltDown();
 	// Digit scrub
 	if (readerSource != nullptr)
 	{
@@ -116,18 +116,25 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 	double scrubAmount = ctrlDown ? 5.0 : 0.25;
 	double currentPos = transportSource.getCurrentPosition();
 	double length = transportSource.getLengthInSeconds();
-	int keyCode = key.getKeyCode();
+	//int keyCode = key.getKeyCode();
+	
 
 	if (ctrlDown)
 	{
-		if (keyCode == juce::KeyPress::homeKey)
+		if (key.getKeyCode() == 'o' || key.getKeyCode() == 'O') {
+			importFile();
+		}
+		if (key.getKeyCode() == 's' || key.getKeyCode() == 'S') {
+			exportModifiedFile();
+		}
+		if (key.getKeyCode() == juce::KeyPress::homeKey)
 		{
 			transportSource.setPosition(0.0); // start of file
 			repaint();
 			return true;
 		}
 
-		if (keyCode == juce::KeyPress::endKey)
+		if (key.getKeyCode() == juce::KeyPress::endKey)
 		{
 			double length = transportSource.getLengthInSeconds();
 			transportSource.setPosition(length); // end of file
@@ -169,7 +176,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 	}
 
 	// Alt+F / Alt+P opens menus
-	if (key.getModifiers().isAltDown())
+	if (altDown)
 	{
 		if (c == 'f')
 		{
