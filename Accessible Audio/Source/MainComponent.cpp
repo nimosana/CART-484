@@ -81,11 +81,12 @@ void MainComponent::releaseResources()
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 {
 	char c = (char)std::tolower(key.getTextCharacter());
+	bool ctrlDown = key.getModifiers().isCtrlDown();
 
 	// Digit scrub
 	if (readerSource != nullptr)
 	{
-		auto c = key.getTextCharacter();
+		//auto c = key.getTextCharacter();
 		if (c >= '0' && c <= '9')
 		{
 			transportSource.setPosition((c - '0') / 10.0 * transportSource.getLengthInSeconds());
@@ -112,28 +113,44 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 
 		return true;
 	}
-	if (true)
-	{
-		double scrubAmount = key.getModifiers().isCtrlDown() ? 5.0 : 0.25;
-		double currentPos = transportSource.getCurrentPosition();
-		double length = transportSource.getLengthInSeconds();
+	double scrubAmount = ctrlDown ? 5.0 : 0.25;
+	double currentPos = transportSource.getCurrentPosition();
+	double length = transportSource.getLengthInSeconds();
+	int keyCode = key.getKeyCode();
 
-		if (key.getKeyCode() == juce::KeyPress::rightKey)
+	if (ctrlDown)
+	{
+		if (keyCode == juce::KeyPress::homeKey)
 		{
-			double newPos = juce::jlimit(0.0, length, currentPos + scrubAmount);
-			transportSource.setPosition(newPos);
+			transportSource.setPosition(0.0); // start of file
 			repaint();
 			return true;
 		}
 
-		if (key.getKeyCode() == juce::KeyPress::leftKey)
+		if (keyCode == juce::KeyPress::endKey)
 		{
-			double newPos = juce::jlimit(0.0, length, currentPos - scrubAmount);
-			transportSource.setPosition(newPos);
+			double length = transportSource.getLengthInSeconds();
+			transportSource.setPosition(length); // end of file
 			repaint();
 			return true;
 		}
 	}
+	if (key.getKeyCode() == juce::KeyPress::rightKey)
+	{
+		double newPos = juce::jlimit(0.0, length, currentPos + scrubAmount);
+		transportSource.setPosition(newPos);
+		repaint();
+		return true;
+	}
+
+	if (key.getKeyCode() == juce::KeyPress::leftKey)
+	{
+		double newPos = juce::jlimit(0.0, length, currentPos - scrubAmount);
+		transportSource.setPosition(newPos);
+		repaint();
+		return true;
+	}
+
 	// Gain edit mode: arrow keys adjust gain and step
 	if (gainEditMode)
 	{
