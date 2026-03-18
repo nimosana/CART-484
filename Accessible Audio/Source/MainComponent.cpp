@@ -84,6 +84,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 	bool ctrlDown = key.getModifiers().isCtrlDown();
 	bool altDown = key.getModifiers().isAltDown();
 	// Digit scrub
+	
 	if (readerSource != nullptr)
 	{
 		//auto c = key.getTextCharacter();
@@ -91,7 +92,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 		{
 			transportSource.setPosition((c - '0') / 10.0 * transportSource.getLengthInSeconds());
 			return true;
+		} else if (c == 'g')
+		{
+			gainEditMode = !gainEditMode;
+			repaint();
+			return true;
 		}
+		
 	}
 
 	// Space toggles playback
@@ -113,11 +120,11 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 
 		return true;
 	}
-	double scrubAmount = ctrlDown ? 5.0 : 0.25;
+	double scrubAmount = ctrlDown ? 10.0 : 2;
 	double currentPos = transportSource.getCurrentPosition();
 	double length = transportSource.getLengthInSeconds();
 	//int keyCode = key.getKeyCode();
-	
+
 
 	if (ctrlDown)
 	{
