@@ -98,7 +98,16 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 			repaint();
 			return true;
 		}
-		
+		if (c == 'l')
+		{
+			lowPassEnabled = !lowPassEnabled;
+			return true;
+		}
+		else if (c == 'h')
+		{
+			highPassEnabled = !highPassEnabled;
+			return true;
+		}
 	}
 
 	// Space toggles playback

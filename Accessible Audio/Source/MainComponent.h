@@ -48,6 +48,8 @@ private:
     bool scrubMode = false;
     bool fadeIn = false;
     bool fadeOut = false;
+    bool lowPassEnabled = false;
+    bool highPassEnabled = false;
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
