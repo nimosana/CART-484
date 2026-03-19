@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "CropDialog.h"
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::KeyListener,
@@ -30,6 +31,15 @@ private:
     void importFile();
     void togglePlayback();
     void exportModifiedFile();
+    
+    void applyCrop();
+    void openCropDialog(bool isStart);
+    void announceTime();
+    
+    std::unique_ptr<juce::MemoryAudioSource> memorySource;
+    
+    // Helper: formats seconds as "X minutes Y seconds"
+    static juce::String formatTime(double seconds);
 
     // Track menu navigation
     int activeMenuIndex = -1;
@@ -41,6 +51,13 @@ private:
     juce::AudioTransportSource transportSource;
 
     juce::File currentFile;
+    
+    juce::AudioBuffer<float> audioBuffer;
+    double fileSampleRate = 44100.0;
+    int fileNumChannels   = 2;
+    
+    double cropStart = -1.0;               
+    double cropEnd   = -1.0;
 
     float gain = 1.0f;
     float gainStep = 0.1f;
