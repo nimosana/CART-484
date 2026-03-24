@@ -184,6 +184,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         else if (c == 'g')
         {
             gainEditMode = !gainEditMode;
+            lowFreqEditMode = false;
+            highFreqEditMode = false;
+
             juce::AccessibilityHandler::postAnnouncement(
                 gainEditMode ? "Gain edit mode enabled." : "Gain edit mode disabled.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
@@ -290,6 +293,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (key.getKeyCode() == 'l' || key.getKeyCode() == 'L')
         {
             lowFreqEditMode = !lowFreqEditMode;
+            gainEditMode = false;
             highFreqEditMode = false; // only one at a time
             juce::AccessibilityHandler::postAnnouncement(
                 lowFreqEditMode
@@ -303,6 +307,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (key.getKeyCode() == 'h' || key.getKeyCode() == 'H')
         {
             highFreqEditMode = !highFreqEditMode;
+            gainEditMode = false;
             lowFreqEditMode = false;
             juce::AccessibilityHandler::postAnnouncement(
                 highFreqEditMode
@@ -348,7 +353,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     {
         if (key.getKeyCode() == juce::KeyPress::upKey)
         {
-            lowShelfFreq = juce::jlimit(20.0, 2000.0, lowShelfFreq + 50.0);
+            lowShelfFreq = juce::jlimit(0.0, 2000.0, lowShelfFreq + 50.0);
             updateFilterCoefficients();
             juce::AccessibilityHandler::postAnnouncement(
                 "Low shelf " + juce::String((int)lowShelfFreq) + " Hz.",
@@ -358,7 +363,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         if (key.getKeyCode() == juce::KeyPress::downKey)
         {
-            lowShelfFreq = juce::jlimit(20.0, 2000.0, lowShelfFreq - 50.0);
+            lowShelfFreq = juce::jlimit(0.0, 2000.0, lowShelfFreq - 50.0);
             updateFilterCoefficients();
             juce::AccessibilityHandler::postAnnouncement(
                 "Low shelf " + juce::String((int)lowShelfFreq) + " Hz.",
