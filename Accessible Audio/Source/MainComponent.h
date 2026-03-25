@@ -66,8 +66,16 @@ private:
 	float gainStep = 0.1f;
 	bool gainEditMode = false;
 	bool scrubMode = false;
-	bool fadeIn = false;
-	bool fadeOut = false;
+
+	// Fades
+	// Q / W        : toggle fade in / out on-off
+	// Ctrl+Q / W   : enter/exit duration edit mode (arrows change duration)
+	bool   fadeInEnabled = false;
+	bool   fadeOutEnabled = false;
+	bool   fadeInEditMode = false;
+	bool   fadeOutEditMode = false;
+	double fadeInDuration = 1.0;   // seconds, range 0.1-30, step 0.1
+	double fadeOutDuration = 1.0;
 
 	// Filters
 	// Low shelf  : -12 dB cut below lowShelfFreq   (toggle: L, freq edit: Ctrl+L)
@@ -77,8 +85,8 @@ private:
 	bool lowFreqEditMode = false;  // Ctrl+L enters/exits; arrows change frequency
 	bool highFreqEditMode = false;  // Ctrl+H enters/exits; arrows change frequency
 
-	double lowShelfFreq = 300.0;   // Hz, range 20–2000,  step 50
-	double highShelfFreq = 8000.0;  // Hz, range 1000–20000, step 200
+	double lowShelfFreq = 300.0;   // Hz, range 20?2000,  step 50
+	double highShelfFreq = 8000.0;  // Hz, range 1000?20000, step 200
 
 	double currentSampleRate = 44100.0;
 

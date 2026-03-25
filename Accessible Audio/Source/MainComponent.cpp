@@ -78,6 +78,36 @@ void MainComponent::paint(juce::Graphics& g)
         g.drawFittedText(s, bounds.removeFromBottom(24),
             juce::Justification::centredLeft, 1);
     }
+
+    // --- fourth line: fade out ---
+    {
+        juce::String s;
+        s << "Fade Out (W): " << (fadeOutEnabled ? "ON" : "off");
+        s << "   " << juce::String(fadeOutDuration, 1) << " s";
+        if (fadeOutEditMode)
+            s << "  [Ctrl+W | arrows change duration]";
+        else
+            s << "  [Ctrl+W to edit duration]";
+
+        g.setColour(fadeOutEnabled ? juce::Colours::lightyellow : juce::Colours::grey);
+        g.drawFittedText(s, bounds.removeFromBottom(24),
+            juce::Justification::centredLeft, 1);
+    }
+
+    // --- fifth line: fade in ---
+    {
+        juce::String s;
+        s << "Fade In  (Q): " << (fadeInEnabled ? "ON" : "off");
+        s << "   " << juce::String(fadeInDuration, 1) << " s";
+        if (fadeInEditMode)
+            s << "  [Ctrl+Q | arrows change duration]";
+        else
+            s << "  [Ctrl+Q to edit duration]";
+
+        g.setColour(fadeInEnabled ? juce::Colours::lightyellow : juce::Colours::grey);
+        g.drawFittedText(s, bounds.removeFromBottom(24),
+            juce::Justification::centredLeft, 1);
+    }
 }
 
 void MainComponent::resized()
@@ -146,6 +176,39 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
         if (highPassEnabled)
             highShelfFilter[ch].processSamples(data, numSamps);
+    }
+
+    // Apply fade in / fade out as per-sample linear ramps.
+    // getCurrentPosition() returns the playhead AFTER the block was consumed,
+    // so the block started one block-duration earlier.
+    if ((fadeInEnabled || fadeOutEnabled) && currentSampleRate > 0.0)
+    {
+        double totalLength = transportSource.getLengthInSeconds();
+        double blockStartSec = transportSource.getCurrentPosition()
+            - (double)numSamps / currentSampleRate;
+
+        for (int ch = 0; ch < buf->getNumChannels() && ch < 2; ++ch)
+        {
+            float* data = buf->getWritePointer(ch, startSamp);
+            for (int s = 0; s < numSamps; ++s)
+            {
+                double pos = blockStartSec + (double)s / currentSampleRate;
+                float  fadeGain = 1.0f;
+
+                if (fadeInEnabled && fadeInDuration > 0.0)
+                    fadeGain *= juce::jlimit(0.0f, 1.0f,
+                        (float)(pos / fadeInDuration));
+
+                if (fadeOutEnabled && fadeOutDuration > 0.0)
+                {
+                    double fromEnd = totalLength - pos;
+                    fadeGain *= juce::jlimit(0.0f, 1.0f,
+                        (float)(fromEnd / fadeOutDuration));
+                }
+
+                data[s] *= fadeGain;
+            }
+        }
     }
 }
 
@@ -254,6 +317,28 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             repaint();
             return true;
         }
+        else if (c == 'q')
+        {
+            fadeInEnabled = !fadeInEnabled;
+            juce::AccessibilityHandler::postAnnouncement(
+                fadeInEnabled
+                ? "Fade in on. " + juce::String(fadeInDuration, 1) + " seconds."
+                : "Fade in off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        else if (c == 'w')
+        {
+            fadeOutEnabled = !fadeOutEnabled;
+            juce::AccessibilityHandler::postAnnouncement(
+                fadeOutEnabled
+                ? "Fade out on. " + juce::String(fadeOutDuration, 1) + " seconds."
+                : "Fade out off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
     }
 
     // Space toggles playback
@@ -294,7 +379,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             lowFreqEditMode = !lowFreqEditMode;
             gainEditMode = false;
-            highFreqEditMode = false; // only one at a time
+            highFreqEditMode = false;
+            fadeInEditMode = false;
+            fadeOutEditMode = false;
             juce::AccessibilityHandler::postAnnouncement(
                 lowFreqEditMode
                 ? "Low shelf frequency edit mode. Use up and down arrows to change frequency. Currently " + juce::String((int)lowShelfFreq) + " Hz."
@@ -309,10 +396,44 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             highFreqEditMode = !highFreqEditMode;
             gainEditMode = false;
             lowFreqEditMode = false;
+            fadeInEditMode = false;
+            fadeOutEditMode = false;
             juce::AccessibilityHandler::postAnnouncement(
                 highFreqEditMode
                 ? "High shelf frequency edit mode. Use up and down arrows to change frequency. Currently " + juce::String((int)highShelfFreq) + " Hz."
                 : "High shelf frequency edit mode off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        // Ctrl+Q: enter/exit fade-in duration edit mode
+        if (key.getKeyCode() == 'q' || key.getKeyCode() == 'Q')
+        {
+            fadeInEditMode = !fadeInEditMode;
+            fadeOutEditMode = false;
+            gainEditMode = false;
+            lowFreqEditMode = false;
+            highFreqEditMode = false;
+            juce::AccessibilityHandler::postAnnouncement(
+                fadeInEditMode
+                ? "Fade in duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeInDuration, 1) + " seconds."
+                : "Fade in duration edit mode off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        // Ctrl+W: enter/exit fade-out duration edit mode
+        if (key.getKeyCode() == 'w' || key.getKeyCode() == 'W')
+        {
+            fadeOutEditMode = !fadeOutEditMode;
+            fadeInEditMode = false;
+            gainEditMode = false;
+            lowFreqEditMode = false;
+            highFreqEditMode = false;
+            juce::AccessibilityHandler::postAnnouncement(
+                fadeOutEditMode
+                ? "Fade out duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeOutDuration, 1) + " seconds."
+                : "Fade out duration edit mode off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
             return true;
@@ -348,8 +469,50 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         return true;
     }
 
-    // Up/Down arrows: filter freq edit modes take priority, then gain edit mode
-    if (lowFreqEditMode)
+    // Up/Down arrows: edit modes in priority order — fade in, fade out, filter freqs, gain
+    if (fadeInEditMode)
+    {
+        if (key.getKeyCode() == juce::KeyPress::upKey)
+        {
+            fadeInDuration = juce::jlimit(0.1, 30.0, fadeInDuration + 0.1);
+            juce::AccessibilityHandler::postAnnouncement(
+                "Fade in " + juce::String(fadeInDuration, 1) + " seconds.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::downKey)
+        {
+            fadeInDuration = juce::jlimit(0.1, 30.0, fadeInDuration - 0.1);
+            juce::AccessibilityHandler::postAnnouncement(
+                "Fade in " + juce::String(fadeInDuration, 1) + " seconds.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+    }
+    else if (fadeOutEditMode)
+    {
+        if (key.getKeyCode() == juce::KeyPress::upKey)
+        {
+            fadeOutDuration = juce::jlimit(0.1, 30.0, fadeOutDuration + 0.1);
+            juce::AccessibilityHandler::postAnnouncement(
+                "Fade out " + juce::String(fadeOutDuration, 1) + " seconds.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::downKey)
+        {
+            fadeOutDuration = juce::jlimit(0.1, 30.0, fadeOutDuration - 0.1);
+            juce::AccessibilityHandler::postAnnouncement(
+                "Fade out " + juce::String(fadeOutDuration, 1) + " seconds.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+    }
+    else if (lowFreqEditMode)
     {
         if (key.getKeyCode() == juce::KeyPress::upKey)
         {
@@ -754,29 +917,57 @@ void MainComponent::exportModifiedFile()
 
             if (hasMemoryBuffer)
             {
-                // Write from in-memory cropped buffer with gain + filters applied
+                // Write from in-memory cropped buffer with gain + filters + fades applied
                 juce::AudioBuffer<float> copy(audioBuffer);
                 copy.applyGain(gain);
+
+                double totalLength = (double)copy.getNumSamples() / fileSampleRate;
+
                 for (int ch = 0; ch < copy.getNumChannels() && ch < 2; ++ch)
                 {
                     float* data = copy.getWritePointer(ch);
+
                     if (lowPassEnabled)
                         exportLow[ch].processSamples(data, copy.getNumSamples());
                     if (highPassEnabled)
                         exportHigh[ch].processSamples(data, copy.getNumSamples());
+
+                    if (fadeInEnabled || fadeOutEnabled)
+                    {
+                        for (int s = 0; s < copy.getNumSamples(); ++s)
+                        {
+                            double pos = (double)s / fileSampleRate;
+                            float  fadeGain = 1.0f;
+
+                            if (fadeInEnabled && fadeInDuration > 0.0)
+                                fadeGain *= juce::jlimit(0.0f, 1.0f,
+                                    (float)(pos / fadeInDuration));
+
+                            if (fadeOutEnabled && fadeOutDuration > 0.0)
+                            {
+                                double fromEnd = totalLength - pos;
+                                fadeGain *= juce::jlimit(0.0f, 1.0f,
+                                    (float)(fromEnd / fadeOutDuration));
+                            }
+
+                            data[s] *= fadeGain;
+                        }
+                    }
                 }
                 writer->writeFromAudioSampleBuffer(copy, 0, copy.getNumSamples());
             }
             else
             {
-                // Write from original file with gain + filters applied
+                // Write from original file with gain + filters + fades applied
                 std::unique_ptr<juce::AudioFormatReader> reader(
                     formatManager.createReaderFor(currentFile));
                 if (reader == nullptr) return;
 
+                double totalLength = (double)reader->lengthInSamples / exportSR;
+
                 const int bufferSize = 32768;
                 juce::AudioBuffer<float> buffer(fileNumChannels, bufferSize);
-                auto totalSamples = reader->lengthInSamples;
+                auto        totalSamples = reader->lengthInSamples;
                 juce::int64 processed = 0;
 
                 while (processed < totalSamples)
@@ -785,15 +976,41 @@ void MainComponent::exportModifiedFile()
                         (juce::int64)bufferSize, totalSamples - processed);
                     if (!reader->read(&buffer, 0, thisBlock, processed, true, true))
                         break;
+
                     buffer.applyGain(0, thisBlock, gain);
+
                     for (int ch = 0; ch < buffer.getNumChannels() && ch < 2; ++ch)
                     {
                         float* data = buffer.getWritePointer(ch);
+
                         if (lowPassEnabled)
                             exportLow[ch].processSamples(data, thisBlock);
                         if (highPassEnabled)
                             exportHigh[ch].processSamples(data, thisBlock);
+
+                        if (fadeInEnabled || fadeOutEnabled)
+                        {
+                            for (int s = 0; s < thisBlock; ++s)
+                            {
+                                double pos = (double)(processed + s) / exportSR;
+                                float  fadeGain = 1.0f;
+
+                                if (fadeInEnabled && fadeInDuration > 0.0)
+                                    fadeGain *= juce::jlimit(0.0f, 1.0f,
+                                        (float)(pos / fadeInDuration));
+
+                                if (fadeOutEnabled && fadeOutDuration > 0.0)
+                                {
+                                    double fromEnd = totalLength - pos;
+                                    fadeGain *= juce::jlimit(0.0f, 1.0f,
+                                        (float)(fromEnd / fadeOutDuration));
+                                }
+
+                                data[s] *= fadeGain;
+                            }
+                        }
                     }
+
                     writer->writeFromAudioSampleBuffer(buffer, 0, thisBlock);
                     processed += thisBlock;
                 }
