@@ -39,6 +39,11 @@ public:
             setResizable(true, true);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
+
+            // Ensure the content component owns keyboard focus immediately,
+            // so keyboard shortcuts work without requiring an initial click.
+            if (auto* content = getContentComponent())
+                content->grabKeyboardFocus();
         }
 
         void closeButtonPressed() override

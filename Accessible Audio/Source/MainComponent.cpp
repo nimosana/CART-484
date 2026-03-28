@@ -17,6 +17,14 @@ MainComponent::MainComponent()
 
     addKeyListener(this);
 
+    // Grab keyboard focus as soon as the component is on screen so the blind
+    // user can use keyboard shortcuts immediately without an initial click.
+    // callAsync defers until after the window is fully constructed and visible.
+    juce::MessageManager::callAsync([this]()
+        {
+            grabKeyboardFocus();
+        });
+
     setAudioChannels(0, 2);
 }
 
