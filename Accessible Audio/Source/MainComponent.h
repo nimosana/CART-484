@@ -93,6 +93,47 @@ private:
 	// One filter instance per channel (stereo = 2)
 	juce::IIRFilter lowShelfFilter[2];
 	juce::IIRFilter highShelfFilter[2];
+    
+    
+    // Effect history
+    juce::StringArray effectHistory;
+    void logEffect(const juce::String& description);
+
+    // Undo / Redo
+    struct AppState
+    {
+        juce::String description;
+        
+        // Parameters
+        float gain;
+        float gainStep;
+        bool fadeInEnabled;
+        bool fadeOutEnabled;
+        double fadeInDuration;
+        double fadeOutDuration;
+        bool lowPassEnabled;
+        bool highPassEnabled;
+        double lowShelfFreq;
+        double highShelfFreq;
+        double cropStart;
+        double cropEnd;
+
+        // Audio buffer snapshot (empty if no crop applied yet)
+        juce::AudioBuffer<float> audioBuffer;
+        double fileSampleRate;
+        int fileNumChannels;
+    };
+
+    static constexpr int maxUndoLevels = 5;
+    std::vector<AppState> undoStack;
+    std::vector<AppState> redoStack;
+
+    void saveUndoState(const juce::String& description);
+
+    void performUndo();
+    void performRedo();
+    AppState captureCurrentState();
+    void restoreState(const AppState& state);
 
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

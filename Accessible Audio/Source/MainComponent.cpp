@@ -254,6 +254,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         else if (c == 'g')
         {
+            saveUndoState("Gain edit mode " + juce::String(gainEditMode ? "disabled" : "enabled"));
+            logEffect("Gain edit mode " + juce::String(gainEditMode ? "disabled" : "enabled"));
+            
             gainEditMode = !gainEditMode;
             lowFreqEditMode = false;
             highFreqEditMode = false;
@@ -301,6 +304,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 
         if (c == 'l')
         {
+            saveUndoState("Low shelf filter " + juce::String(!lowPassEnabled ? "on" : "off"));
+            logEffect("Low shelf filter " + juce::String(!lowPassEnabled ? "on" : "off"));
+
             lowPassEnabled = !lowPassEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 lowPassEnabled
@@ -314,6 +320,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         else if (c == 'h')
         {
+            saveUndoState("High shelf filter " + juce::String(!highPassEnabled ? "on" : "off"));
+            logEffect("High shelf filter " + juce::String(!highPassEnabled ? "on" : "off"));
+            
             highPassEnabled = !highPassEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 highPassEnabled
@@ -327,6 +336,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         else if (c == 'q')
         {
+            saveUndoState("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
+            logEffect("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
+            
             fadeInEnabled = !fadeInEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeInEnabled
@@ -338,6 +350,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         else if (c == 'w')
         {
+            saveUndoState("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
+            logEffect("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
+            
             fadeOutEnabled = !fadeOutEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeOutEnabled
@@ -376,6 +391,18 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 
     if (ctrlDown)
     {
+        if (key.getKeyCode() == 'z' || key.getKeyCode() == 'Z')
+        {
+            performUndo();
+            return true;
+        }
+        if (key.getKeyCode() == 'y' || key.getKeyCode() == 'Y')
+        {
+            performRedo();
+            return true;
+        }
+        
+        
         if (key.getKeyCode() == 'o' || key.getKeyCode() == 'O') {
             importFile();
         }
@@ -570,6 +597,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     {
         if (key.getKeyCode() == juce::KeyPress::upKey)
         {
+            saveUndoState("Gain increased to " + juce::String(gain + gainStep, 2));
+            logEffect("Gain increased to " + juce::String(gain + gainStep, 2));
+           
             gain = juce::jlimit(0.0f, 4.0f, gain + gainStep);
             juce::AccessibilityHandler::postAnnouncement(
                 "Gain set to " + juce::String(gain, 1),
@@ -580,6 +610,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         if (key.getKeyCode() == juce::KeyPress::downKey)
         {
+            saveUndoState("Gain decreased to " + juce::String(gain - gainStep, 2));
+            logEffect("Gain decreased to " + juce::String(gain - gainStep, 2));
+            
             gain = juce::jlimit(0.0f, 4.0f, gain - gainStep);
             juce::AccessibilityHandler::postAnnouncement(
                 "Gain set to " + juce::String(gain, 1),
@@ -662,6 +695,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         menu.addItem(6, "Set Crop Start (type time)");
         menu.addItem(7, "Set Crop End (type time)");
         menu.addItem(8, "Apply Crop", cropStart >= 0.0 && cropEnd >= 0.0);
+        menu.addItem(9,  "Undo (Ctrl+Z)", !undoStack.empty());
+        menu.addItem(10, "Redo (Ctrl+Y)", !redoStack.empty());
+        menu.addSeparator();
+        
     }
     else if (menuIndex == 3) // Help
     {
@@ -701,7 +738,24 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         effectsShortcuts.addItem(47, "Set In Point: I");
         effectsShortcuts.addItem(48, "Set Out Point: O");
         effectsShortcuts.addItem(49, "Crop audio between In and Out points: Shift + C");
+        effectsShortcuts.addItem(50, "Undo: Ctrl + Z");
+        effectsShortcuts.addItem(51, "Redo: Ctrl + Y");
+
         menu.addSubMenu("Effects", effectsShortcuts);
+        
+        menu.addSeparator();
+
+        juce::PopupMenu historyMenu;
+        if (effectHistory.isEmpty())
+        {
+            historyMenu.addItem(90, "No effects applied yet", true);
+        }
+        else
+        {
+            for (int i = 0; i < effectHistory.size(); ++i)
+                historyMenu.addItem(100 + i, effectHistory[i], true); // true = enabled, so arrow keys can land on it
+        }
+        menu.addSubMenu("Effect History", historyMenu);
     }
 
     return menu;
@@ -731,6 +785,9 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 7: openCropDialog(false);  break;
     case 8: applyCrop();            break;
             
+    case 9:  performUndo();         break;
+    case 10: performRedo();         break;
+            
     case 20:
         juce::AccessibilityHandler::postAnnouncement(
             "VytAudio is a keyboard-controlled audio editor. "
@@ -743,10 +800,153 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 21: case 22: case 23: case 24: case 25: case 26:
     case 30: case 31: case 32: case 33: case 34: case 35: case 36:
     case 40: case 41: case 42: case 43: case 44: case 45:
-    case 46: case 47: case 48: case 49:
-        // Shortcut items are informational only — no action needed
+    case 46: case 47: case 48: case 49: case 50: case 51:
         break;
+            
+        case 90:
+            break; // "No effects yet" — no action
+
+        default:
+            // All history items (100+) — no action needed
+            break;
     }
+}
+
+
+void MainComponent::logEffect(const juce::String& description)
+{
+    juce::Time now = juce::Time::getCurrentTime();
+    juce::String entry = now.toString(false, true, true, false)
+                         + "  —  " + description;
+    effectHistory.insert(0, entry); // newest first
+    if (effectHistory.size() > 50)  // cap at 50 entries
+        effectHistory.remove(effectHistory.size() - 1);
+}
+
+
+MainComponent::AppState MainComponent::captureCurrentState()
+{
+    AppState s;
+    s.gain             = gain;
+    s.gainStep         = gainStep;
+    s.fadeInEnabled    = fadeInEnabled;
+    s.fadeOutEnabled   = fadeOutEnabled;
+    s.fadeInDuration   = fadeInDuration;
+    s.fadeOutDuration  = fadeOutDuration;
+    s.lowPassEnabled   = lowPassEnabled;
+    s.highPassEnabled  = highPassEnabled;
+    s.lowShelfFreq     = lowShelfFreq;
+    s.highShelfFreq    = highShelfFreq;
+    s.cropStart        = cropStart;
+    s.cropEnd          = cropEnd;
+    s.fileSampleRate   = fileSampleRate;
+    s.fileNumChannels  = fileNumChannels;
+
+    // Deep copy the audio buffer
+    if (audioBuffer.getNumSamples() > 0)
+    {
+        s.audioBuffer.setSize(audioBuffer.getNumChannels(),
+                              audioBuffer.getNumSamples());
+        for (int ch = 0; ch < audioBuffer.getNumChannels(); ++ch)
+            s.audioBuffer.copyFrom(ch, 0, audioBuffer, ch, 0,
+                                   audioBuffer.getNumSamples());
+    }
+    return s;
+}
+
+void MainComponent::saveUndoState(const juce::String& description)
+{
+    if ((int)undoStack.size() >= maxUndoLevels)
+        undoStack.erase(undoStack.begin());
+    AppState s = captureCurrentState();
+    s.description = description;
+    undoStack.push_back(s);
+    redoStack.clear();
+}
+
+void MainComponent::restoreState(const AppState& s)
+{
+    gain            = s.gain;
+    gainStep        = s.gainStep;
+    fadeInEnabled   = s.fadeInEnabled;
+    fadeOutEnabled  = s.fadeOutEnabled;
+    fadeInDuration  = s.fadeInDuration;
+    fadeOutDuration = s.fadeOutDuration;
+    lowPassEnabled  = s.lowPassEnabled;
+    highPassEnabled = s.highPassEnabled;
+    lowShelfFreq    = s.lowShelfFreq;
+    highShelfFreq   = s.highShelfFreq;
+    cropStart       = s.cropStart;
+    cropEnd         = s.cropEnd;
+    fileSampleRate  = s.fileSampleRate;
+    fileNumChannels = s.fileNumChannels;
+
+    // Restore audio buffer if there is one
+    if (s.audioBuffer.getNumSamples() > 0)
+    {
+        audioBuffer.setSize(s.audioBuffer.getNumChannels(),
+                            s.audioBuffer.getNumSamples());
+        for (int ch = 0; ch < s.audioBuffer.getNumChannels(); ++ch)
+            audioBuffer.copyFrom(ch, 0, s.audioBuffer, ch, 0,
+                                 s.audioBuffer.getNumSamples());
+
+        transportSource.stop();
+        transportSource.setSource(nullptr);
+        readerSource.reset();
+        memorySource = std::make_unique<juce::MemoryAudioSource>(audioBuffer, false);
+        transportSource.setSource(memorySource.get(), 0, nullptr, fileSampleRate);
+    }
+
+    updateFilterCoefficients();
+    repaint();
+}
+
+void MainComponent::performUndo()
+{
+    if (undoStack.empty())
+    {
+        juce::AccessibilityHandler::postAnnouncement(
+            "Nothing to undo.",
+            juce::AccessibilityHandler::AnnouncementPriority::high);
+        return;
+    }
+
+    juce::String whatChanged = undoStack.back().description;
+
+    redoStack.push_back(captureCurrentState());
+    restoreState(undoStack.back());
+    undoStack.pop_back();
+    logEffect("Undo: " + whatChanged);
+
+    juce::AccessibilityHandler::postAnnouncement(
+        "Undo: " + whatChanged + ". "
+        + juce::String((int)undoStack.size())
+        + " undo steps remaining.",
+        juce::AccessibilityHandler::AnnouncementPriority::high);
+}
+
+void MainComponent::performRedo()
+{
+    if (redoStack.empty())
+    {
+        juce::AccessibilityHandler::postAnnouncement(
+            "Nothing to redo.",
+            juce::AccessibilityHandler::AnnouncementPriority::high);
+        return;
+    }
+
+    juce::String whatChanged = redoStack.back().description;
+
+    undoStack.push_back(captureCurrentState());
+    restoreState(redoStack.back());
+    redoStack.pop_back();
+    logEffect("Redo: " + whatChanged);
+
+    juce::AccessibilityHandler::postAnnouncement(
+        "Redo: " + whatChanged + ". "
+        + juce::String((int)redoStack.size())
+        + " redo steps remaining.",
+        juce::AccessibilityHandler::AnnouncementPriority::high);
 }
 
 
@@ -842,6 +1042,9 @@ void MainComponent::applyCrop()
             juce::AccessibilityHandler::AnnouncementPriority::high);
         return;
     }
+    
+    logEffect("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
+    saveUndoState("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
 
     fileSampleRate = reader->sampleRate;
     fileNumChannels = (int)reader->numChannels;
