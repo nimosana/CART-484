@@ -1,4 +1,4 @@
-﻿#include "MainComponent.h"
+#include "MainComponent.h"
 
 //==============================================================================
 MainComponent::MainComponent()
@@ -608,6 +608,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             if (menuBar) menuBar->showMenu(2);
             return true;
         }
+        
+        
+        if (c == 'h' && !key.getModifiers().isCtrlDown())
+          {
+              if (menuBar) menuBar->showMenu(3);
+              return true;
+          }
     }
     return false;
 }
@@ -625,7 +632,7 @@ void MainComponent::announceTime()
 //==============================================================================
 juce::StringArray MainComponent::getMenuBarNames()
 {
-    return { "File", "Playback", "Edit" };
+    return { "File", "Playback", "Edit", "Help" };
 }
 
 juce::PopupMenu MainComponent::getMenuForIndex(
@@ -656,6 +663,46 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         menu.addItem(7, "Set Crop End (type time)");
         menu.addItem(8, "Apply Crop", cropStart >= 0.0 && cropEnd >= 0.0);
     }
+    else if (menuIndex == 3) // Help
+    {
+        menu.addItem(20, "Getting Started");
+        menu.addSeparator();
+
+        // Menu Shortcuts submenu
+        juce::PopupMenu menuShortcuts;
+        menuShortcuts.addItem(21, "Open File Menu: Alt + F");
+        menuShortcuts.addItem(22, "Open Playback Menu: Alt + P");
+        menuShortcuts.addItem(23, "Open Edit Menu: Alt + E");
+        menuShortcuts.addItem(24, "Open Help Menu: Alt + H");
+        menuShortcuts.addItem(25, "Open WAV File: Ctrl + O");
+        menuShortcuts.addItem(26, "Save Modified WAV File: Ctrl + S");
+        menu.addSubMenu("Menu Shortcuts", menuShortcuts);
+
+        // Playback Controls submenu
+        juce::PopupMenu playbackShortcuts;
+        playbackShortcuts.addItem(30, "Play or Pause: Space");
+        playbackShortcuts.addItem(31, "Announce current time: T");
+        playbackShortcuts.addItem(32, "Move playhead by 2 seconds: Left or Right Arrow");
+        playbackShortcuts.addItem(33, "Move playhead by 10 seconds: Ctrl + Left or Right Arrow");
+        playbackShortcuts.addItem(34, "Jump to percentage of track: Number keys 1 to 9");
+        playbackShortcuts.addItem(35, "Move playhead to start: Home or 0");
+        playbackShortcuts.addItem(36, "Move playhead to end: End");
+        menu.addSubMenu("Playback Controls", playbackShortcuts);
+
+        // Effects submenu
+        juce::PopupMenu effectsShortcuts;
+        effectsShortcuts.addItem(40, "Toggle Gain Editing Mode: G");
+        effectsShortcuts.addItem(41, "Increase or decrease gain: Up and Down Arrow keys");
+        effectsShortcuts.addItem(42, "Toggle Low Shelf Filter: L");
+        effectsShortcuts.addItem(43, "Enter Low Shelf Frequency Edit Mode: Ctrl + L");
+        effectsShortcuts.addItem(44, "Adjust frequency: Up and Down Arrow keys");
+        effectsShortcuts.addItem(45, "Toggle High Shelf Filter: H");
+        effectsShortcuts.addItem(46, "Enter High Shelf Frequency Edit Mode: Ctrl + H");
+        effectsShortcuts.addItem(47, "Set In Point: I");
+        effectsShortcuts.addItem(48, "Set Out Point: O");
+        effectsShortcuts.addItem(49, "Crop audio between In and Out points: Shift + C");
+        menu.addSubMenu("Effects", effectsShortcuts);
+    }
 
     return menu;
 }
@@ -683,6 +730,22 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 6: openCropDialog(true);   break;
     case 7: openCropDialog(false);  break;
     case 8: applyCrop();            break;
+            
+    case 20:
+        juce::AccessibilityHandler::postAnnouncement(
+            "VytAudio is a keyboard-controlled audio editor. "
+            "Open WAV files, navigate audio, apply effects, "
+            "and export your edits using keyboard commands. "
+            "Press Alt + H at any time to open this Help menu.",
+            juce::AccessibilityHandler::AnnouncementPriority::high);
+        break;
+
+    case 21: case 22: case 23: case 24: case 25: case 26:
+    case 30: case 31: case 32: case 33: case 34: case 35: case 36:
+    case 40: case 41: case 42: case 43: case 44: case 45:
+    case 46: case 47: case 48: case 49:
+        // Shortcut items are informational only — no action needed
+        break;
     }
 }
 
