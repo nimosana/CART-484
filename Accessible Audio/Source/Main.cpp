@@ -36,11 +36,17 @@ public:
                 .findColour(juce::ResizableWindow::backgroundColourId),
                 DocumentWindow::allButtons)
         {
+            //setResizable(true, true);
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);
-            setResizable(true, true);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
+            setFullScreen(true); 
+
+            // Ensure the content component owns keyboard focus immediately,
+            // so keyboard shortcuts work without requiring an initial click.
+            if (auto* content = getContentComponent())
+                content->grabKeyboardFocus();
         }
 
         void closeButtonPressed() override
