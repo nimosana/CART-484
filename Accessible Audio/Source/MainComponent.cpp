@@ -3,7 +3,8 @@
 //==============================================================================
 MainComponent::MainComponent()
 {
-    setSize(400, 350);
+    //setSize(400, 350);
+    setSize(400, 380);  // base height without EQ sliders open
 
     formatManager.registerBasicFormats();
 
@@ -108,6 +109,35 @@ void MainComponent::paint(juce::Graphics& g)
         g.drawFittedText(s, bounds.removeFromBottom(24),
             juce::Justification::centredLeft, 1);
     }
+    // --- sixth line: EQ ---
+// --- sixth line: EQ ---
+// --- EQ status line + sliders ---
+    {
+        // Always show the status line
+        juce::String s;
+        s << "EQ           (E): " << (eqEnabled ? "ON" : "off");
+        int active = 0;
+        for (auto& b : eqBands) if (b.enabled) ++active;
+        s << "   " << active << " band(s) active";
+        if (eqEditMode)
+            s << "   [Tab=select band  Up/Down=gain  Space=toggle]";
+        else
+            s << "   [Ctrl+E to edit]";
+
+        g.setColour(eqEnabled ? juce::Colours::lightgreen : juce::Colours::grey);
+        g.drawFittedText(s, bounds.removeFromBottom(24),
+            juce::Justification::centredLeft, 1);
+
+        // Slider area — only visible in edit mode
+        if (eqEditMode)
+        {
+            auto sliderArea = bounds.removeFromBottom(120);
+            sliderArea = sliderArea.reduced(4, 4);
+            g.setColour(juce::Colour(0xff111122));
+            g.fillRect(sliderArea);
+            drawEQSliders(g, sliderArea);
+        }
+    }
 }
 
 void MainComponent::resized()
@@ -139,11 +169,181 @@ void MainComponent::updateFilterCoefficients()
     }
 }
 
+
+
+void MainComponent::updateEQCoefficients()
+{
+    // Use the file's sample rate if we have one loaded,
+    // otherwise fall back to the device rate.
+    // This matches what the export path does, fixing the live/export mismatch.
+    double sr = (fileSampleRate > 0.0) ? fileSampleRate : currentSampleRate;
+    if (sr <= 0.0) return;
+
+    for (int b = 0; b < kNumEQBands; ++b)
+    {
+        float linearGain = juce::Decibels::decibelsToGain((float)eqBands[b].gainDB);
+        auto coeffs = juce::IIRCoefficients::makePeakFilter(
+            sr, eqBands[b].freq, eqBands[b].Q, linearGain);
+
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            eqFilter[b][ch].setCoefficients(coeffs);
+            eqFilter[b][ch].reset();
+        }
+    }
+}
+void MainComponent::drawEQSliders(juce::Graphics& g, juce::Rectangle<int> area)
+{
+    static constexpr int kDbMax = 12;
+
+    // ── Layout constants ────────────────────────────────────────────────────
+    const int labelTopH = 18;   // dB value label at top of each column
+    const int labelBotH = 16;   // frequency name at bottom
+    const int axisW = 28;   // left axis column width
+    const int sliderW = area.getWidth() / (kNumEQBands + 1); // +1 so axis fits
+    const int trackPad = 4;    // horizontal inset so track is centred in column
+
+    // Slider track lives between the two labels
+    juce::Rectangle<int> trackArea(
+        area.getX() + axisW,
+        area.getY() + labelTopH,
+        area.getWidth() - axisW,
+        area.getHeight() - labelTopH - labelBotH);
+
+    const int trackLeft = trackArea.getX();
+    const int trackTop = trackArea.getY();
+    const int trackH = trackArea.getHeight();
+    const int bandW = trackArea.getWidth() / kNumEQBands;
+
+    // ── Background ──────────────────────────────────────────────────────────
+    g.setColour(juce::Colour(0xff1a1a2e));
+    g.fillRect(area);
+
+    // ── dB axis labels + horizontal grid lines ───────────────────────────────
+    // Grid at +12, +6, 0, -6, -12 dB
+    const int gridDBs[] = { 12, 6, 0, -6, -12 };
+    for (int db : gridDBs)
+    {
+        float frac = 0.5f - (float)db / (2.0f * kDbMax);
+        int   lineY = trackTop + (int)(frac * trackH);
+
+        // Axis label
+        g.setFont(juce::Font(9.0f));
+        g.setColour(juce::Colour(0xff888899));
+        juce::String lbl = (db > 0 ? "+" : "") + juce::String(db);
+        g.drawText(lbl,
+            area.getX(), lineY - 7, axisW - 4, 14,
+            juce::Justification::centredRight, false);
+
+        // Grid line
+        g.setColour(db == 0 ? juce::Colour(0xff444466)
+            : juce::Colour(0xff252535));
+        g.drawHorizontalLine(lineY, (float)trackLeft, (float)trackArea.getRight());
+    }
+
+    // Thin border around the whole slider track area
+    g.setColour(juce::Colour(0xff2a2a40));
+    g.drawRect(trackArea);
+
+    // ── Per-band rendering ───────────────────────────────────────────────────
+    for (int b = 0; b < kNumEQBands; ++b)
+    {
+        bool   sel = eqEditMode && (b == eqSelectedBand);
+        bool   on = eqBands[b].enabled;
+        double db = eqBands[b].gainDB;
+
+        // Column rectangle within the track area
+        juce::Rectangle<int> col(trackLeft + b * bandW, trackTop, bandW, trackH);
+
+        // Selection highlight
+        if (sel)
+        {
+            g.setColour(juce::Colour(0x1800c8ff));
+            g.fillRect(col);
+        }
+
+        // Vertical divider between bands (skip after last)
+        if (b < kNumEQBands - 1)
+        {
+            g.setColour(juce::Colour(0xff252535));
+            g.drawVerticalLine(col.getRight(), (float)trackTop, (float)(trackTop + trackH));
+        }
+
+        // ── Thin centre track line ────────────────────────────────────────
+        int trackCX = col.getCentreX();
+        g.setColour(juce::Colour(0xff383850));
+        g.fillRect(trackCX - 1, col.getY() + 4, 2, col.getHeight() - 8);
+
+        // ── Thumb position ───────────────────────────────────────────────
+        float thumbFrac = 0.5f - (float)(db / (2.0 * kDbMax));
+        int   thumbCY = col.getY() + (int)(thumbFrac * col.getHeight());
+
+        // Thumb rectangle (horizontal grip, like image 1)
+        const int thumbW = bandW - trackPad * 2 - 2;
+        const int thumbH = 10;
+        juce::Rectangle<int> thumb(
+            trackCX - thumbW / 2,
+            thumbCY - thumbH / 2,
+            thumbW, thumbH);
+
+        // Thumb body
+        juce::Colour thumbFace = !on ? juce::Colour(0xff3a3a50)
+            : sel ? juce::Colour(0xffd0eeff)
+            : juce::Colour(0xffc0c8d8);
+        g.setColour(thumbFace);
+        g.fillRoundedRectangle(thumb.toFloat(), 2.0f);
+
+        // Thumb border
+        g.setColour(sel ? juce::Colour(0xff00c8ff)
+            : (on ? juce::Colour(0xff7788aa) : juce::Colour(0xff444455)));
+        g.drawRoundedRectangle(thumb.toFloat(), 2.0f, 0.8f);
+
+        // Three notch lines on the thumb (like a real fader grip)
+        if (on || sel)
+        {
+            juce::Colour notchCol = sel ? juce::Colour(0xff006090)
+                : juce::Colour(0xff8899aa);
+            g.setColour(notchCol);
+            for (int n = -1; n <= 1; ++n)
+            {
+                int nx = trackCX + n * 4;
+                g.fillRect(nx, thumb.getCentreY() - 3, 1, 6);
+            }
+        }
+
+        // ── dB value label (above slider area, top of column) ───────────
+        g.setFont(juce::Font(9.5f, sel ? juce::Font::bold : juce::Font::plain));
+        g.setColour(sel ? juce::Colours::white
+            : (on ? juce::Colour(0xffaabbcc) : juce::Colour(0xff555566)));
+        juce::String dbStr = (db >= 0 ? "+" : "") + juce::String((int)std::round(db));
+        g.drawText(dbStr,
+            col.getX(), area.getY(), bandW, labelTopH,
+            juce::Justification::centred, false);
+
+        // ── Frequency label (below slider area) ──────────────────────────
+        g.setFont(9.0f);
+        g.setColour(sel ? juce::Colour(0xff00c8ff)
+            : (on ? juce::Colour(0xff7788aa) : juce::Colour(0xff444455)));
+        g.drawText(eqBands[b].name,
+            col.getX(), area.getBottom() - labelBotH, bandW, labelBotH,
+            juce::Justification::centred, false);
+    }
+}
+
+void MainComponent::applyEQToBuffer(float* data, int numSamples, int channel)
+{
+    if (!eqEnabled) return;
+    for (int b = 0; b < kNumEQBands; ++b)
+        if (eqBands[b].enabled)
+            eqFilter[b][channel].processSamples(data, numSamples);
+}
+
 //==============================================================================
 void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     currentSampleRate = sampleRate;
     updateFilterCoefficients();
+    updateEQCoefficients();
     transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
@@ -176,7 +376,12 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
         if (highPassEnabled)
             highShelfFilter[ch].processSamples(data, numSamps);
+
     }
+
+    if (eqEnabled)
+        for (int ch = 0; ch < buf->getNumChannels() && ch < 2; ++ch)
+            applyEQToBuffer(buf->getWritePointer(ch, startSamp), numSamps, ch);
 
     // Apply fade in / fade out as per-sample linear ramps.
     // getCurrentPosition() returns the playhead AFTER the block was consumed,
@@ -263,7 +468,15 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             announceTime();
             return true;
         }
-
+        else if (c == 'e' && !ctrlDown && !altDown)
+        {
+            eqEnabled = !eqEnabled;
+            juce::AccessibilityHandler::postAnnouncement(
+                eqEnabled ? "EQ on." : "EQ off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
         // I � set crop IN point at playhead
         else if (c == 'i')
         {
@@ -348,18 +561,18 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         return true;
     }
     // Tab cycles through menus
-    else if (key == juce::KeyPress::tabKey)
-    {
-        if (activeMenuIndex == -1)
-            activeMenuIndex = 0;
-        else
-            activeMenuIndex = (activeMenuIndex + 1) % getMenuBarNames().size();
+    //else if (key == juce::KeyPress::tabKey)
+    //{
+    //    if (activeMenuIndex == -1)
+    //        activeMenuIndex = 0;
+    //    else
+    //        activeMenuIndex = (activeMenuIndex + 1) % getMenuBarNames().size();
 
-        if (true)
-            menuBar->showMenu(activeMenuIndex); // this is required; no �highlight only� possible
+    //    if (true)
+    //        menuBar->showMenu(activeMenuIndex); // this is required; no �highlight only� possible
 
-        return true;
-    }
+    //    return true;
+    //}
     double scrubAmount = ctrlDown ? 10.0 : 2;
     double currentPos = transportSource.getCurrentPosition();
     double length = transportSource.getLengthInSeconds();
@@ -386,6 +599,19 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
                 lowFreqEditMode
                 ? "Low shelf frequency edit mode. Use up and down arrows to change frequency. Currently " + juce::String((int)lowShelfFreq) + " Hz."
                 : "Low shelf frequency edit mode off.",
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == 'e' || key.getKeyCode() == 'E')
+        {
+            eqEditMode = !eqEditMode;
+            // Resize the window to make room for (or hide) the slider panel
+            setSize(getWidth(), eqEditMode ? 500 : 380);
+            juce::AccessibilityHandler::postAnnouncement(
+                eqEditMode
+                ? "EQ edit mode. Tab to select band. Up and down arrows to adjust gain. Space to toggle band."
+                : "EQ edit mode off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
             return true;
@@ -468,7 +694,51 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         repaint();
         return true;
     }
-
+    if (eqEditMode)
+    {
+       if (key.getKeyCode() == juce::KeyPress::tabKey)
+        {
+            bool shift = key.getModifiers().isShiftDown();
+            eqSelectedBand = (eqSelectedBand + (shift ? kNumEQBands - 1 : 1)) % kNumEQBands;
+            juce::String msg;
+            msg << "Band " << (eqSelectedBand + 1) << ": " << eqBands[eqSelectedBand].name
+                << ", " << (eqBands[eqSelectedBand].gainDB >= 0 ? "+" : "")
+                << juce::String(eqBands[eqSelectedBand].gainDB, 1) << " dB"
+                << (eqBands[eqSelectedBand].enabled ? ", on." : ", off.");
+            juce::AccessibilityHandler::postAnnouncement(
+                msg, juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        if (key == juce::KeyPress::spaceKey)
+        {
+            eqBands[eqSelectedBand].enabled = !eqBands[eqSelectedBand].enabled;
+            updateEQCoefficients();
+            juce::AccessibilityHandler::postAnnouncement(
+                eqBands[eqSelectedBand].name +
+                (eqBands[eqSelectedBand].enabled ? " on." : " off."),
+                juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::upKey ||
+            key.getKeyCode() == juce::KeyPress::downKey)
+        {
+            bool   up = (key.getKeyCode() == juce::KeyPress::upKey);
+            double step = key.getModifiers().isShiftDown() ? 3.0 : 1.0;
+            double& db = eqBands[eqSelectedBand].gainDB;
+            db = juce::jlimit(-12.0, 12.0, db + (up ? step : -step));
+            eqBands[eqSelectedBand].enabled = true;
+            updateEQCoefficients();
+            juce::String msg;
+            msg << eqBands[eqSelectedBand].name << " "
+                << (db >= 0 ? "+" : "") << juce::String(db, 1) << " dB.";
+            juce::AccessibilityHandler::postAnnouncement(
+                msg, juce::AccessibilityHandler::AnnouncementPriority::high);
+            repaint();
+            return true;
+        }
+    }
     // Up/Down arrows: edit modes in priority order — fade in, fade out, filter freqs, gain
     if (fadeInEditMode)
     {
@@ -735,6 +1005,7 @@ void MainComponent::openCropDialog(bool isStart)
     dialog->grabFocusOnOpen();
 }
 
+
 //==============================================================================
 void MainComponent::applyCrop()
 {
@@ -838,8 +1109,14 @@ void MainComponent::importFile()
                 return;
 
             // Update filter coefficients to match the file's sample rate
+            /*   currentSampleRate = reader->sampleRate;
+            updateFilterCoefficients();*/
+            // Update filter coefficients to match the file's sample rate
             currentSampleRate = reader->sampleRate;
+            fileSampleRate = reader->sampleRate;       // FIX: was never set on import
+            fileNumChannels = (int)reader->numChannels; // FIX: was never set on import
             updateFilterCoefficients();
+            updateEQCoefficients();
             auto newSource =
                 std::make_unique<juce::AudioFormatReaderSource>(
                     reader.release(), true);
@@ -905,10 +1182,28 @@ void MainComponent::exportModifiedFile()
             if (writer == nullptr) return;
 
             // Build offline filter chain matching live playback
-            const double exportSR = fileSampleRate;
+            // Guard: fileSampleRate must have been set by importFile or applyCrop.
+            // If it's still the default 44100 but the transport knows better, trust the transport.
+            const double exportSR = (fileSampleRate > 0.0) ? fileSampleRate : currentSampleRate;
             juce::IIRFilter exportLow[2], exportHigh[2];
             auto lowCoeffs = juce::IIRCoefficients::makeLowShelf(exportSR, lowShelfFreq, 0.7, 0.25f);
             auto highCoeffs = juce::IIRCoefficients::makeHighShelf(exportSR, highShelfFreq, 0.7, 0.25f);
+
+
+
+            // EQ filters for export
+            juce::IIRFilter exportEQ[kNumEQBands][2];
+            if (eqEnabled)
+            {
+                for (int b = 0; b < kNumEQBands; ++b)
+                {
+                    float lg = juce::Decibels::decibelsToGain((float)eqBands[b].gainDB);
+                    auto c = juce::IIRCoefficients::makePeakFilter(
+                        exportSR, eqBands[b].freq, eqBands[b].Q, lg);
+                    for (int ch = 0; ch < 2; ++ch)
+                        exportEQ[b][ch].setCoefficients(c);
+                }
+            }
             for (int ch = 0; ch < 2; ++ch)
             {
                 exportLow[ch].setCoefficients(lowCoeffs);
@@ -931,7 +1226,10 @@ void MainComponent::exportModifiedFile()
                         exportLow[ch].processSamples(data, copy.getNumSamples());
                     if (highPassEnabled)
                         exportHigh[ch].processSamples(data, copy.getNumSamples());
-
+                    if (eqEnabled)
+                        for (int b = 0; b < kNumEQBands; ++b)
+                            if (eqBands[b].enabled)
+                                exportEQ[b][ch].processSamples(data, copy.getNumSamples());
                     if (fadeInEnabled || fadeOutEnabled)
                     {
                         for (int s = 0; s < copy.getNumSamples(); ++s)
@@ -953,6 +1251,7 @@ void MainComponent::exportModifiedFile()
                             data[s] *= fadeGain;
                         }
                     }
+
                 }
                 writer->writeFromAudioSampleBuffer(copy, 0, copy.getNumSamples());
             }
@@ -969,6 +1268,7 @@ void MainComponent::exportModifiedFile()
                 juce::AudioBuffer<float> buffer(fileNumChannels, bufferSize);
                 auto        totalSamples = reader->lengthInSamples;
                 juce::int64 processed = 0;
+
 
                 while (processed < totalSamples)
                 {
@@ -987,7 +1287,10 @@ void MainComponent::exportModifiedFile()
                             exportLow[ch].processSamples(data, thisBlock);
                         if (highPassEnabled)
                             exportHigh[ch].processSamples(data, thisBlock);
-
+                        if (eqEnabled)
+                            for (int b = 0; b < kNumEQBands; ++b)
+                                if (eqBands[b].enabled)
+                                    exportEQ[b][ch].processSamples(data,thisBlock);
                         if (fadeInEnabled || fadeOutEnabled)
                         {
                             for (int s = 0; s < thisBlock; ++s)

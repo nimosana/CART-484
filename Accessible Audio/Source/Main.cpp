@@ -1,6 +1,8 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
 
+
+
 class JuicegangApplication : public juce::JUCEApplication
 {
 public:

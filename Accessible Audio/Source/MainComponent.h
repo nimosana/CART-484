@@ -94,6 +94,40 @@ private:
 	juce::IIRFilter lowShelfFilter[2];
 	juce::IIRFilter highShelfFilter[2];
 
+	// === Parametric EQ ===
+	// 9 bands matching standard graphic EQ: 63 125 250 500 1k 2k 4k 8k 16k
+	// === Parametric EQ ===
+	static constexpr int kNumEQBands = 9;
+
+	struct EQBand {
+		juce::String name;
+		double       freq;
+		double       gainDB;
+		double       Q;
+		bool         enabled;
+	};
+
+	EQBand eqBands[kNumEQBands] = {
+		{ "63 Hz",   63.0,    0.0, 1.0, false },
+		{ "125 Hz",  125.0,   0.0, 1.0, false },
+		{ "250 Hz",  250.0,   0.0, 1.0, false },
+		{ "500 Hz",  500.0,   0.0, 1.0, false },
+		{ "1k Hz",   1000.0,  0.0, 1.0, false },
+		{ "2k Hz",   2000.0,  0.0, 1.0, false },
+		{ "4k Hz",   4000.0,  0.0, 1.0, false },
+		{ "8k Hz",   8000.0,  0.0, 1.0, false },
+		{ "16k Hz",  16000.0, 0.0, 1.0, false },
+	};
+
+	bool eqEnabled = false;
+	bool eqEditMode = false;   // Ctrl+E enters/exits; Tab cycles bands; Up/Down adjusts
+	int  eqSelectedBand = 0;
+
+	juce::IIRFilter eqFilter[kNumEQBands][2];
+
+	void updateEQCoefficients();
+	void applyEQToBuffer(float* data, int numSamples, int channel);
+	void drawEQSliders(juce::Graphics& g, juce::Rectangle<int> area);
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
