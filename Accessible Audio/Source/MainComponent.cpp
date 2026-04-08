@@ -128,7 +128,7 @@ void MainComponent::paint(juce::Graphics& g)
         for (auto& b : eqBands) if (b.enabled) ++active;
         s << "   " << active << " band(s) active";
         if (eqEditMode)
-            s << "   [Tab=select band  Up/Down=gain  Space=toggle]";
+            s << "   [Tab=select band  Up/Down=gain]";
         else
             s << "   [Ctrl+E to edit]";
 
@@ -702,7 +702,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             setSize(getWidth(), eqEditMode ? 500 : 380);
             juce::AccessibilityHandler::postAnnouncement(
                 eqEditMode
-                ? "EQ edit mode. Tab to select band. Up and down arrows to adjust gain. Space to toggle band."
+                ? "EQ edit mode. Tab to select band. Up and down arrows to adjust gain."
                 : "EQ edit mode off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
@@ -1118,8 +1118,8 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         playbackShortcuts.addItem(32, "Move playhead by 2 seconds: Left or Right Arrow");
         playbackShortcuts.addItem(33, "Move playhead by 10 seconds: Ctrl + Left or Right Arrow");
         playbackShortcuts.addItem(34, "Jump to percentage of track: Number keys 1 to 9");
-        playbackShortcuts.addItem(35, "Move playhead to start: Home or 0");
-        playbackShortcuts.addItem(36, "Move playhead to end: End");
+        playbackShortcuts.addItem(35, "Move playhead to start: Ctrl + Home or 0");
+        playbackShortcuts.addItem(36, "Move playhead to end: Ctrl + End");
         menu.addSubMenu("Playback Controls", playbackShortcuts);
 
         // Effects submenu
@@ -1134,8 +1134,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         effectsShortcuts.addItem(47, "Set In Point: I");
         effectsShortcuts.addItem(48, "Set Out Point: O");
         effectsShortcuts.addItem(49, "Crop audio between In and Out points: Shift + C");
-        effectsShortcuts.addItem(50, "Undo: Ctrl + Z");
-        effectsShortcuts.addItem(51, "Redo: Ctrl + Y");
+        effectsShortcuts.addItem(50, "Toggle Equalizer On or Off: E");
+        effectsShortcuts.addItem(51, "Toggle EQ Band Editing Mode: Ctrl + E");
+        effectsShortcuts.addItem(52, "Undo: Ctrl + Z");
+        effectsShortcuts.addItem(53, "Redo: Ctrl + Y");
 
         menu.addSubMenu("Effects", effectsShortcuts);
 
