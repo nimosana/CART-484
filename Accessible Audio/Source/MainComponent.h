@@ -21,6 +21,10 @@ public:
 	// Keyboard
 	bool keyPressed(const juce::KeyPress& key, juce::Component*) override;
 
+	// Mouse (EQ dragging)
+	void mouseDown(const juce::MouseEvent& e) override;
+	void mouseDrag(const juce::MouseEvent& e) override;
+
 	// Menu
 	juce::StringArray getMenuBarNames() override;
 	juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String&) override;
@@ -163,6 +167,7 @@ private:
 	bool eqEnabled = false;
 	bool eqEditMode = false;   // Ctrl+E enters/exits; Tab cycles bands; Up/Down adjusts
 	int  eqSelectedBand = 0;
+	juce::Rectangle<int> eqSlidersArea;
 
 	juce::IIRFilter eqFilter[kNumEQBands][2];
 
