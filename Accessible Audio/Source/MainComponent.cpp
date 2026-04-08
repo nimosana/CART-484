@@ -459,12 +459,33 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         else if (c == 'g')
         {
+            // Mutual exclusion: if another edit mode is already active, exit it
+            // without entering gain mode (one press to get out, one to get in).
+            bool anyOther = fadeInEditMode || fadeOutEditMode ||
+                lowFreqEditMode || highFreqEditMode || eqEditMode;
+            if (anyOther)
+            {
+                fadeInEditMode = false;
+                fadeOutEditMode = false;
+                lowFreqEditMode = false;
+                highFreqEditMode = false;
+                if (eqEditMode) { eqEditMode = false; setSize(getWidth(), 380); }
+                gainEditMode = false;
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+
             saveUndoState("Gain edit mode " + juce::String(gainEditMode ? "disabled" : "enabled"));
             logEffect("Gain edit mode " + juce::String(gainEditMode ? "disabled" : "enabled"));
-            
+
             gainEditMode = !gainEditMode;
             lowFreqEditMode = false;
             highFreqEditMode = false;
+            fadeInEditMode = false;
+            fadeOutEditMode = false;
 
             juce::AccessibilityHandler::postAnnouncement(
                 gainEditMode ? "Gain edit mode enabled." : "Gain edit mode disabled.",
@@ -531,11 +552,11 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             repaint();
             return true;
         }
-        else if (c == 'h')
+        else if (c == 'h' && !altDown)
         {
             saveUndoState("High shelf filter " + juce::String(!highPassEnabled ? "on" : "off"));
             logEffect("High shelf filter " + juce::String(!highPassEnabled ? "on" : "off"));
-            
+
             highPassEnabled = !highPassEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 highPassEnabled
@@ -551,7 +572,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             saveUndoState("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
             logEffect("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
-            
+
             fadeInEnabled = !fadeInEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeInEnabled
@@ -565,7 +586,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             saveUndoState("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
             logEffect("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
-            
+
             fadeOutEnabled = !fadeOutEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeOutEnabled
@@ -614,8 +635,8 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             performRedo();
             return true;
         }
-        
-        
+
+
         if (key.getKeyCode() == 'o' || key.getKeyCode() == 'O') {
             importFile();
         }
@@ -625,6 +646,29 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         // Ctrl+L: enter/exit low shelf frequency edit mode
         if (key.getKeyCode() == 'l' || key.getKeyCode() == 'L')
         {
+            // Mutual exclusion: another edit mode is active — exit it, don't enter this one.
+            bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
+                highFreqEditMode || eqEditMode;
+            if (anyOther)
+            {
+                gainEditMode = false; fadeInEditMode = false; fadeOutEditMode = false;
+                lowFreqEditMode = false; highFreqEditMode = false;
+                if (eqEditMode) { eqEditMode = false; setSize(getWidth(), 380); }
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+            // Refuse to enter edit mode when the filter is disabled
+            // (allow toggling back off if already in edit mode).
+            if (!lowPassEnabled && !lowFreqEditMode)
+            {
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Low shelf filter is off. Press L to enable it first.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                return true;
+            }
             lowFreqEditMode = !lowFreqEditMode;
             gainEditMode = false;
             highFreqEditMode = false;
@@ -640,6 +684,19 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         }
         if (key.getKeyCode() == 'e' || key.getKeyCode() == 'E')
         {
+            // Mutual exclusion: another edit mode is active — exit it, don't enter EQ mode.
+            bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
+                lowFreqEditMode || highFreqEditMode;
+            if (anyOther)
+            {
+                gainEditMode = false; fadeInEditMode = false; fadeOutEditMode = false;
+                lowFreqEditMode = false; highFreqEditMode = false;
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
             eqEditMode = !eqEditMode;
             // Resize the window to make room for (or hide) the slider panel
             setSize(getWidth(), eqEditMode ? 500 : 380);
@@ -654,6 +711,29 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         // Ctrl+H: enter/exit high shelf frequency edit mode
         if (key.getKeyCode() == 'h' || key.getKeyCode() == 'H')
         {
+            // Mutual exclusion: another edit mode is active — exit it, don't enter this one.
+            bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
+                lowFreqEditMode || eqEditMode;
+            if (anyOther)
+            {
+                gainEditMode = false; fadeInEditMode = false; fadeOutEditMode = false;
+                lowFreqEditMode = false; highFreqEditMode = false;
+                if (eqEditMode) { eqEditMode = false; setSize(getWidth(), 380); }
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+            // Refuse to enter edit mode when the filter is disabled
+            // (allow toggling back off if already in edit mode).
+            if (!highPassEnabled && !highFreqEditMode)
+            {
+                juce::AccessibilityHandler::postAnnouncement(
+                    "High shelf filter is off. Press H to enable it first.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                return true;
+            }
             highFreqEditMode = !highFreqEditMode;
             gainEditMode = false;
             lowFreqEditMode = false;
@@ -670,6 +750,29 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         // Ctrl+Q: enter/exit fade-in duration edit mode
         if (key.getKeyCode() == 'q' || key.getKeyCode() == 'Q')
         {
+            // Mutual exclusion: another edit mode is active — exit it, don't enter this one.
+            bool anyOther = gainEditMode || fadeOutEditMode ||
+                lowFreqEditMode || highFreqEditMode || eqEditMode;
+            if (anyOther)
+            {
+                gainEditMode = false; fadeInEditMode = false; fadeOutEditMode = false;
+                lowFreqEditMode = false; highFreqEditMode = false;
+                if (eqEditMode) { eqEditMode = false; setSize(getWidth(), 380); }
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+            // Refuse to enter edit mode when fade in is disabled
+            // (allow toggling back off if already in edit mode).
+            if (!fadeInEnabled && !fadeInEditMode)
+            {
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Fade in is off. Press Q to enable it first.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                return true;
+            }
             fadeInEditMode = !fadeInEditMode;
             fadeOutEditMode = false;
             gainEditMode = false;
@@ -686,6 +789,29 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         // Ctrl+W: enter/exit fade-out duration edit mode
         if (key.getKeyCode() == 'w' || key.getKeyCode() == 'W')
         {
+            // Mutual exclusion: another edit mode is active — exit it, don't enter this one.
+            bool anyOther = gainEditMode || fadeInEditMode ||
+                lowFreqEditMode || highFreqEditMode || eqEditMode;
+            if (anyOther)
+            {
+                gainEditMode = false; fadeInEditMode = false; fadeOutEditMode = false;
+                lowFreqEditMode = false; highFreqEditMode = false;
+                if (eqEditMode) { eqEditMode = false; setSize(getWidth(), 380); }
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Edit mode off.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+            // Refuse to enter edit mode when fade out is disabled
+            // (allow toggling back off if already in edit mode).
+            if (!fadeOutEnabled && !fadeOutEditMode)
+            {
+                juce::AccessibilityHandler::postAnnouncement(
+                    "Fade out is off. Press W to enable it first.",
+                    juce::AccessibilityHandler::AnnouncementPriority::high);
+                return true;
+            }
             fadeOutEditMode = !fadeOutEditMode;
             fadeInEditMode = false;
             gainEditMode = false;
@@ -731,7 +857,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     }
     if (eqEditMode)
     {
-       if (key.getKeyCode() == juce::KeyPress::tabKey)
+        if (key.getKeyCode() == juce::KeyPress::tabKey)
         {
             bool shift = key.getModifiers().isShiftDown();
             eqSelectedBand = (eqSelectedBand + (shift ? kNumEQBands - 1 : 1)) % kNumEQBands;
@@ -869,7 +995,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             saveUndoState("Gain increased to " + juce::String(gain + gainStep, 2));
             logEffect("Gain increased to " + juce::String(gain + gainStep, 2));
-           
+
             gain = juce::jlimit(0.0f, 4.0f, gain + gainStep);
             juce::AccessibilityHandler::postAnnouncement(
                 "Gain set to " + juce::String(gain, 1),
@@ -882,7 +1008,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             saveUndoState("Gain decreased to " + juce::String(gain - gainStep, 2));
             logEffect("Gain decreased to " + juce::String(gain - gainStep, 2));
-            
+
             gain = juce::jlimit(0.0f, 4.0f, gain - gainStep);
             juce::AccessibilityHandler::postAnnouncement(
                 "Gain set to " + juce::String(gain, 1),
@@ -911,13 +1037,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             if (menuBar) menuBar->showMenu(2);
             return true;
         }
-        
-        
+
+
         if (c == 'h' && !key.getModifiers().isCtrlDown())
-          {
-              if (menuBar) menuBar->showMenu(3);
-              return true;
-          }
+        {
+            if (menuBar) menuBar->showMenu(3);
+            return true;
+        }
     }
     return false;
 }
@@ -965,10 +1091,10 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         menu.addItem(6, "Set Crop Start (type time)");
         menu.addItem(7, "Set Crop End (type time)");
         menu.addItem(8, "Apply Crop", cropStart >= 0.0 && cropEnd >= 0.0);
-        menu.addItem(9,  "Undo (Ctrl+Z)", !undoStack.empty());
+        menu.addItem(9, "Undo (Ctrl+Z)", !undoStack.empty());
         menu.addItem(10, "Redo (Ctrl+Y)", !redoStack.empty());
         menu.addSeparator();
-        
+
     }
     else if (menuIndex == 3) // Help
     {
@@ -1012,7 +1138,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         effectsShortcuts.addItem(51, "Redo: Ctrl + Y");
 
         menu.addSubMenu("Effects", effectsShortcuts);
-        
+
         menu.addSeparator();
 
         juce::PopupMenu historyMenu;
@@ -1054,10 +1180,10 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 6: openCropDialog(true);   break;
     case 7: openCropDialog(false);  break;
     case 8: applyCrop();            break;
-            
+
     case 9:  performUndo();         break;
     case 10: performRedo();         break;
-            
+
     case 20:
         juce::AccessibilityHandler::postAnnouncement(
             "VytAudio is a keyboard-controlled audio editor. "
@@ -1072,13 +1198,13 @@ void MainComponent::menuItemSelected(int menuItemID, int)
     case 40: case 41: case 42: case 43: case 44: case 45:
     case 46: case 47: case 48: case 49: case 50: case 51:
         break;
-            
-        case 90:
-            break; // "No effects yet" — no action
 
-        default:
-            // All history items (100+) — no action needed
-            break;
+    case 90:
+        break; // "No effects yet" — no action
+
+    default:
+        // All history items (100+) — no action needed
+        break;
     }
 }
 
@@ -1087,7 +1213,7 @@ void MainComponent::logEffect(const juce::String& description)
 {
     juce::Time now = juce::Time::getCurrentTime();
     juce::String entry = now.toString(false, true, true, false)
-                         + "  —  " + description;
+        + "  —  " + description;
     effectHistory.insert(0, entry); // newest first
     if (effectHistory.size() > 50)  // cap at 50 entries
         effectHistory.remove(effectHistory.size() - 1);
@@ -1097,29 +1223,29 @@ void MainComponent::logEffect(const juce::String& description)
 MainComponent::AppState MainComponent::captureCurrentState()
 {
     AppState s;
-    s.gain             = gain;
-    s.gainStep         = gainStep;
-    s.fadeInEnabled    = fadeInEnabled;
-    s.fadeOutEnabled   = fadeOutEnabled;
-    s.fadeInDuration   = fadeInDuration;
-    s.fadeOutDuration  = fadeOutDuration;
-    s.lowPassEnabled   = lowPassEnabled;
-    s.highPassEnabled  = highPassEnabled;
-    s.lowShelfFreq     = lowShelfFreq;
-    s.highShelfFreq    = highShelfFreq;
-    s.cropStart        = cropStart;
-    s.cropEnd          = cropEnd;
-    s.fileSampleRate   = fileSampleRate;
-    s.fileNumChannels  = fileNumChannels;
+    s.gain = gain;
+    s.gainStep = gainStep;
+    s.fadeInEnabled = fadeInEnabled;
+    s.fadeOutEnabled = fadeOutEnabled;
+    s.fadeInDuration = fadeInDuration;
+    s.fadeOutDuration = fadeOutDuration;
+    s.lowPassEnabled = lowPassEnabled;
+    s.highPassEnabled = highPassEnabled;
+    s.lowShelfFreq = lowShelfFreq;
+    s.highShelfFreq = highShelfFreq;
+    s.cropStart = cropStart;
+    s.cropEnd = cropEnd;
+    s.fileSampleRate = fileSampleRate;
+    s.fileNumChannels = fileNumChannels;
 
     // Deep copy the audio buffer
     if (audioBuffer.getNumSamples() > 0)
     {
         s.audioBuffer.setSize(audioBuffer.getNumChannels(),
-                              audioBuffer.getNumSamples());
+            audioBuffer.getNumSamples());
         for (int ch = 0; ch < audioBuffer.getNumChannels(); ++ch)
             s.audioBuffer.copyFrom(ch, 0, audioBuffer, ch, 0,
-                                   audioBuffer.getNumSamples());
+                audioBuffer.getNumSamples());
     }
     return s;
 }
@@ -1136,29 +1262,29 @@ void MainComponent::saveUndoState(const juce::String& description)
 
 void MainComponent::restoreState(const AppState& s)
 {
-    gain            = s.gain;
-    gainStep        = s.gainStep;
-    fadeInEnabled   = s.fadeInEnabled;
-    fadeOutEnabled  = s.fadeOutEnabled;
-    fadeInDuration  = s.fadeInDuration;
+    gain = s.gain;
+    gainStep = s.gainStep;
+    fadeInEnabled = s.fadeInEnabled;
+    fadeOutEnabled = s.fadeOutEnabled;
+    fadeInDuration = s.fadeInDuration;
     fadeOutDuration = s.fadeOutDuration;
-    lowPassEnabled  = s.lowPassEnabled;
+    lowPassEnabled = s.lowPassEnabled;
     highPassEnabled = s.highPassEnabled;
-    lowShelfFreq    = s.lowShelfFreq;
-    highShelfFreq   = s.highShelfFreq;
-    cropStart       = s.cropStart;
-    cropEnd         = s.cropEnd;
-    fileSampleRate  = s.fileSampleRate;
+    lowShelfFreq = s.lowShelfFreq;
+    highShelfFreq = s.highShelfFreq;
+    cropStart = s.cropStart;
+    cropEnd = s.cropEnd;
+    fileSampleRate = s.fileSampleRate;
     fileNumChannels = s.fileNumChannels;
 
     // Restore audio buffer if there is one
     if (s.audioBuffer.getNumSamples() > 0)
     {
         audioBuffer.setSize(s.audioBuffer.getNumChannels(),
-                            s.audioBuffer.getNumSamples());
+            s.audioBuffer.getNumSamples());
         for (int ch = 0; ch < s.audioBuffer.getNumChannels(); ++ch)
             audioBuffer.copyFrom(ch, 0, s.audioBuffer, ch, 0,
-                                 s.audioBuffer.getNumSamples());
+                s.audioBuffer.getNumSamples());
 
         transportSource.stop();
         transportSource.setSource(nullptr);
@@ -1313,7 +1439,7 @@ void MainComponent::applyCrop()
             juce::AccessibilityHandler::AnnouncementPriority::high);
         return;
     }
-    
+
     logEffect("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
     saveUndoState("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
 
@@ -1564,7 +1690,7 @@ void MainComponent::exportModifiedFile()
                         if (eqEnabled)
                             for (int b = 0; b < kNumEQBands; ++b)
                                 if (eqBands[b].enabled)
-                                    exportEQ[b][ch].processSamples(data,thisBlock);
+                                    exportEQ[b][ch].processSamples(data, thisBlock);
                         if (fadeInEnabled || fadeOutEnabled)
                         {
                             for (int s = 0; s < thisBlock; ++s)
