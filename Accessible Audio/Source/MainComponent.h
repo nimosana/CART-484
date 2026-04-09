@@ -205,8 +205,8 @@ class AccessibleMenuBar : public juce::Component,
     public juce::KeyListener
 {
 public:
-    AccessibleMenuBar(juce::MenuBarModel* model, MainComponent* owner)
-        : model(model), owner(owner)
+    AccessibleMenuBar(juce::MenuBarModel* model, MainComponent* owner, juce::LookAndFeel* laf)
+        : model(model), owner(owner), laf(laf)
     {
         rebuild();
     }
@@ -221,7 +221,8 @@ public:
         for (int i = 0; i < names.size(); ++i)
         {
             auto* btn = new MenuBarButton(names[i]);
-
+            if (laf) btn->setLookAndFeel(laf);
+            
             int idx = i;
             btn->onClick = [this, idx]() {
                 showMenu(idx);
@@ -287,6 +288,7 @@ public:
     }
 
 private:
+    juce::LookAndFeel* laf = nullptr;
     juce::MenuBarModel* model;
     MainComponent* owner;
     juce::OwnedArray<MenuBarButton>    buttons;
@@ -330,13 +332,15 @@ private:
     void openCropDialog(bool isStart);
     void announceTime();
     void announceEffectsStatus();
+    
+    DarkLookAndFeel darkLAF;
 
     std::unique_ptr<juce::MemoryAudioSource> memorySource;
     static juce::String formatTime(double seconds);
 
     int activeMenuIndex = -1;
     juce::PopupMenu activePopup;
-    std::unique_ptr<juce::MenuBarComponent> menuBar;
+    std::unique_ptr<AccessibleMenuBar> menuBar;
 
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
@@ -418,6 +422,5 @@ private:
     void applyEQToBuffer(float* data, int numSamples, int channel);
     void drawEQSliders(juce::Graphics& g, juce::Rectangle<int> area);
 
-    DarkLookAndFeel darkLAF;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

@@ -2,14 +2,14 @@
 //==============================================================================
 MainComponent::MainComponent()
 {
+    juce::LookAndFeel::setDefaultLookAndFeel(&darkLAF);
+    
     setLookAndFeel(&darkLAF);
     setSize(600, 800);  // Slightly wider for better proportions
     formatManager.registerBasicFormats();
 
-    menuBar = std::make_unique<AccessibleMenuBar>(this, this);
-    addAndMakeVisible(menuBar.get());
+    menuBar = std::make_unique<AccessibleMenuBar>(this, this, &darkLAF);    addAndMakeVisible(menuBar.get());
     if (menuBar) {
-        menuBar->setModel(this);
         menuBar->setBounds(0, 0, getWidth(), 30); // Slightly taller for 20pt text
     }
     setWantsKeyboardFocus(true);
@@ -22,8 +22,22 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
-    setLookAndFeel(nullptr);
+    // 1. Stop the audio first so no callbacks try to repaint while we are dying
     shutdownAudio();
+
+    // 2. IMPORTANT: Explicitly delete the menuBar right now.
+    // This forces the OwnedArray of buttons to be destroyed immediately,
+    // releasing their references to the LookAndFeel.
+    menuBar.reset();
+
+    // 3. Tell the global system to stop using this LAF
+    juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
+
+    // 4. Tell all remaining children (Labels, Sliders, etc.) to switch to the default
+    sendLookAndFeelChange();
+
+    // 5. Finally, clear the MainComponent's own LAF
+    setLookAndFeel (nullptr);
 }
 
 //==============================================================================
