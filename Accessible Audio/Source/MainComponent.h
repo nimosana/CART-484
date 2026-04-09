@@ -2,6 +2,11 @@
 #include <JuceHeader.h>
 #include "CropDialog.h"
 
+#include <memory>
+#include <deque>
+
+
+
 class MainComponent : public juce::AudioAppComponent,
 	public juce::KeyListener,
 	public juce::MenuBarModel
@@ -61,7 +66,7 @@ private:
 
 	juce::File currentFile;
 
-	juce::AudioBuffer<float> audioBuffer;
+    std::shared_ptr<juce::AudioBuffer<float>> sharedAudioBuffer;
 	double fileSampleRate = 44100.0;
 	int fileNumChannels = 2;
 
@@ -105,6 +110,20 @@ private:
     juce::StringArray effectHistory;
     void logEffect(const juce::String& description);
 
+
+	// === Parametric EQ ===
+	// 9 bands matching standard graphic EQ: 63 125 250 500 1k 2k 4k 8k 16k
+	// === Parametric EQ ===
+	static constexpr int kNumEQBands = 9;
+
+	struct EQBand {
+		juce::String name;
+		double       freq;
+		double       gainDB;
+		double       Q;
+		bool         enabled;
+	};
+    
     // Undo / Redo
     struct AppState
     {
@@ -123,16 +142,19 @@ private:
         double highShelfFreq;
         double cropStart;
         double cropEnd;
+        bool eqEnabled;
 
-        // Audio buffer snapshot (empty if no crop applied yet)
-        juce::AudioBuffer<float> audioBuffer;
+        EQBand eqBands[kNumEQBands];
+
+        // Audio buffer snapshot pointer
+        std::shared_ptr<juce::AudioBuffer<float>> sharedBuffer;
         double fileSampleRate;
         int fileNumChannels;
     };
 
-    static constexpr int maxUndoLevels = 5;
-    std::vector<AppState> undoStack;
-    std::vector<AppState> redoStack;
+    static constexpr int maxUndoLevels = 50;
+    std::deque<AppState> undoStack;
+    std::deque<AppState> redoStack;
 
     void saveUndoState(const juce::String& description);
 
@@ -140,19 +162,6 @@ private:
     void performRedo();
     AppState captureCurrentState();
     void restoreState(const AppState& state);
-
-	// === Parametric EQ ===
-	// 9 bands matching standard graphic EQ: 63 125 250 500 1k 2k 4k 8k 16k
-	// === Parametric EQ ===
-	static constexpr int kNumEQBands = 9;
-
-	struct EQBand {
-		juce::String name;
-		double       freq;
-		double       gainDB;
-		double       Q;
-		bool         enabled;
-	};
 
 	EQBand eqBands[kNumEQBands] = {
 		{ "63 Hz",   63.0,    0.0, 1.0, false },

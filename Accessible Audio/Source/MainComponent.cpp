@@ -1333,65 +1333,83 @@ MainComponent::AppState MainComponent::captureCurrentState()
     s.highShelfFreq = highShelfFreq;
     s.cropStart = cropStart;
     s.cropEnd = cropEnd;
+    s.eqEnabled = eqEnabled;
     s.fileSampleRate = fileSampleRate;
     s.fileNumChannels = fileNumChannels;
-
+    
     // Deep copy the audio buffer
-    if (audioBuffer.getNumSamples() > 0)
-    {
-        s.audioBuffer.setSize(audioBuffer.getNumChannels(),
-            audioBuffer.getNumSamples());
-        for (int ch = 0; ch < audioBuffer.getNumChannels(); ++ch)
-            s.audioBuffer.copyFrom(ch, 0, audioBuffer, ch, 0,
-                audioBuffer.getNumSamples());
+    for (int b = 0; b < kNumEQBands; ++b) {
+        s.eqBands[b] = eqBands[b];
     }
+    
+    
+    s.sharedBuffer = sharedAudioBuffer;
+    
     return s;
+    
 }
-
 void MainComponent::saveUndoState(const juce::String& description)
 {
     if ((int)undoStack.size() >= maxUndoLevels)
-        undoStack.erase(undoStack.begin());
+        undoStack.pop_front();
+
     AppState s = captureCurrentState();
     s.description = description;
     undoStack.push_back(s);
     redoStack.clear();
 }
-
 void MainComponent::restoreState(const AppState& s)
 {
-    gain = s.gain;
-    gainStep = s.gainStep;
-    fadeInEnabled = s.fadeInEnabled;
-    fadeOutEnabled = s.fadeOutEnabled;
-    fadeInDuration = s.fadeInDuration;
-    fadeOutDuration = s.fadeOutDuration;
-    lowPassEnabled = s.lowPassEnabled;
-    highPassEnabled = s.highPassEnabled;
-    lowShelfFreq = s.lowShelfFreq;
-    highShelfFreq = s.highShelfFreq;
-    cropStart = s.cropStart;
-    cropEnd = s.cropEnd;
-    fileSampleRate = s.fileSampleRate;
-    fileNumChannels = s.fileNumChannels;
+    bool wasPlaying = transportSource.isPlaying();
+    double currentPos = transportSource.getCurrentPosition();
 
-    // Restore audio buffer if there is one
-    if (s.audioBuffer.getNumSamples() > 0)
+    // Restore parameters
+    gain = s.gain; gainStep = s.gainStep;
+    fadeInEnabled = s.fadeInEnabled; fadeOutEnabled = s.fadeOutEnabled;
+    fadeInDuration = s.fadeInDuration; fadeOutDuration = s.fadeOutDuration;
+    lowPassEnabled = s.lowPassEnabled; highPassEnabled = s.highPassEnabled;
+    lowShelfFreq = s.lowShelfFreq; highShelfFreq = s.highShelfFreq;
+    cropStart = s.cropStart; cropEnd = s.cropEnd;
+    eqEnabled = s.eqEnabled;
+    fileSampleRate = s.fileSampleRate; fileNumChannels = s.fileNumChannels;
+    for (int b = 0; b < kNumEQBands; ++b) eqBands[b] = s.eqBands[b];
+    sharedAudioBuffer = s.sharedBuffer;
+
+    // 🔑 Safe swap without releaseResources()
+    transportSource.stop();
+    transportSource.setSource(nullptr);
+
+    if (sharedAudioBuffer != nullptr && sharedAudioBuffer->getNumSamples() > 0)
     {
-        audioBuffer.setSize(s.audioBuffer.getNumChannels(),
-            s.audioBuffer.getNumSamples());
-        for (int ch = 0; ch < s.audioBuffer.getNumChannels(); ++ch)
-            audioBuffer.copyFrom(ch, 0, s.audioBuffer, ch, 0,
-                s.audioBuffer.getNumSamples());
-
-        transportSource.stop();
-        transportSource.setSource(nullptr);
         readerSource.reset();
-        memorySource = std::make_unique<juce::MemoryAudioSource>(audioBuffer, false);
+        memorySource = std::make_unique<juce::MemoryAudioSource>(*sharedAudioBuffer, false);
         transportSource.setSource(memorySource.get(), 0, nullptr, fileSampleRate);
+        cropStart = -1.0; cropEnd = -1.0; // Baked into buffer
+    }
+    else if (currentFile.existsAsFile())
+    {
+        memorySource.reset();
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(currentFile));
+        if (reader)
+        {
+            auto newSource = std::make_unique<juce::AudioFormatReaderSource>(reader.release(), true);
+            transportSource.setSource(newSource.get(), 0, nullptr, newSource->getAudioFormatReader()->sampleRate);
+            readerSource.reset(newSource.release());
+        }
     }
 
     updateFilterCoefficients();
+    updateEQCoefficients();
+
+    // Fallback length calculation (prevents 0-length clamping after swap)
+    double newLength = transportSource.getLengthInSeconds();
+    if (newLength <= 0.0 && sharedAudioBuffer)
+        newLength = sharedAudioBuffer->getNumSamples() / fileSampleRate;
+
+    currentPos = juce::jlimit(0.0, juce::jmax(0.01, newLength), currentPos);
+    transportSource.setPosition(currentPos);
+    
+    if (wasPlaying) transportSource.start();
     repaint();
 }
 
@@ -1413,9 +1431,7 @@ void MainComponent::performUndo()
     logEffect("Undo: " + whatChanged);
 
     juce::AccessibilityHandler::postAnnouncement(
-        "Undo: " + whatChanged + ". "
-        + juce::String((int)undoStack.size())
-        + " undo steps remaining.",
+        "Undo: " + whatChanged,
         juce::AccessibilityHandler::AnnouncementPriority::high);
 }
 
@@ -1437,12 +1453,9 @@ void MainComponent::performRedo()
     logEffect("Redo: " + whatChanged);
 
     juce::AccessibilityHandler::postAnnouncement(
-        "Redo: " + whatChanged + ". "
-        + juce::String((int)redoStack.size())
-        + " redo steps remaining.",
+        "Redo: " + whatChanged,
         juce::AccessibilityHandler::AnnouncementPriority::high);
 }
-
 
 //==============================================================================
 void MainComponent::openCropDialog(bool isStart)
@@ -1504,72 +1517,61 @@ void MainComponent::openCropDialog(bool isStart)
 //==============================================================================
 void MainComponent::applyCrop()
 {
-    if (readerSource == nullptr)
+    if (readerSource == nullptr && memorySource == nullptr)
     {
-        juce::AccessibilityHandler::postAnnouncement(
-            "No file loaded.",
-            juce::AccessibilityHandler::AnnouncementPriority::high);
+        juce::AccessibilityHandler::postAnnouncement("No file loaded.", juce::AccessibilityHandler::AnnouncementPriority::high);
         return;
     }
 
     double length = transportSource.getLengthInSeconds();
-
-    // Fall back to full file if points aren't set
     double startSec = (cropStart >= 0.0) ? cropStart : 0.0;
-    double endSec = (cropEnd >= 0.0) ? cropEnd : length;
+    double endSec   = (cropEnd >= 0.0)   ? cropEnd   : length;
 
     if (startSec >= endSec)
     {
-        juce::AccessibilityHandler::postAnnouncement(
-            "Crop start must be before crop end. Please reset your crop points.",
-            juce::AccessibilityHandler::AnnouncementPriority::high);
+        juce::AccessibilityHandler::postAnnouncement("Crop start must be before crop end.", juce::AccessibilityHandler::AnnouncementPriority::high);
         return;
     }
 
-    // Read the original file into memory
-    std::unique_ptr<juce::AudioFormatReader> reader(
-        formatManager.createReaderFor(currentFile));
-
-    if (reader == nullptr)
-    {
-        juce::AccessibilityHandler::postAnnouncement(
-            "Could not read file for cropping.",
-            juce::AccessibilityHandler::AnnouncementPriority::high);
-        return;
-    }
-
+    // 1. Save undo state BEFORE clearing UI markers
     logEffect("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
     saveUndoState("Crop: " + formatTime(startSec) + " to " + formatTime(endSec));
 
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(currentFile));
+    if (!reader)
+    {
+        juce::AccessibilityHandler::postAnnouncement("Could not read file for cropping.", juce::AccessibilityHandler::AnnouncementPriority::high);
+        return;
+    }
+
     fileSampleRate = reader->sampleRate;
     fileNumChannels = (int)reader->numChannels;
-
     juce::int64 startSample = (juce::int64)(startSec * fileSampleRate);
-    juce::int64 endSample = (juce::int64)(endSec * fileSampleRate);
-    juce::int64 numSamples = endSample - startSample;
+    juce::int64 endSample   = (juce::int64)(endSec   * fileSampleRate);
+    juce::int64 numSamples  = endSample - startSample;
 
-    // Copy just the crop region into our in-memory buffer
-    audioBuffer.setSize(fileNumChannels, (int)numSamples);
-    reader->read(&audioBuffer, 0, (int)numSamples, startSample, true, true);
+    if (numSamples <= 0) return;
 
-    // Stop transport and swap in the new in-memory source
+    sharedAudioBuffer = std::make_shared<juce::AudioBuffer<float>>(fileNumChannels, (int)numSamples);
+    reader->read(sharedAudioBuffer.get(), 0, (int)numSamples, startSample, true, true);
+
+    // 2. SAFE SOURCE SWAP (No releaseResources!)
     transportSource.stop();
-    transportSource.setSource(nullptr);
+    transportSource.setSource(nullptr); // Detach old source
     readerSource.reset();
-
-    memorySource = std::make_unique<juce::MemoryAudioSource>(audioBuffer, false);
+    
+    // Create new in-memory source
+    memorySource = std::make_unique<juce::MemoryAudioSource>(*sharedAudioBuffer, false);
     transportSource.setSource(memorySource.get(), 0, nullptr, fileSampleRate);
 
-    // Reset crop markers now that they are baked in
+    // 3. Clear crop markers AFTER swap is complete
     cropStart = -1.0;
     cropEnd = -1.0;
 
     double newLength = numSamples / fileSampleRate;
     juce::AccessibilityHandler::postAnnouncement(
-        "Crop applied. New length is " + formatTime(newLength) +
-        ". Press Space to play.",
+        "Crop applied. New length is " + formatTime(newLength) + ". Press Space to play.",
         juce::AccessibilityHandler::AnnouncementPriority::high);
-
     repaint();
 }
 
@@ -1642,8 +1644,8 @@ void MainComponent::importFile()
             transportSource.setSource(nullptr);
             readerSource.reset();
 
-            memorySource.reset();  // NEW � clear the old memory source if any
-            audioBuffer.setSize(0, 0);  // NEW � clear stale buffer too
+            memorySource.reset();
+            sharedAudioBuffer.reset();
 
             std::unique_ptr<juce::AudioFormatReader> reader(
                 formatManager.createReaderFor(file));
@@ -1682,8 +1684,8 @@ void MainComponent::importFile()
 //==============================================================================
 void MainComponent::togglePlayback()
 {
-    if (readerSource == nullptr && transportSource.getLengthInSeconds() <= 0.0)
-        return;
+    bool hasSource = (readerSource != nullptr) || (memorySource != nullptr);
+    if (!hasSource) return;
 
     if (transportSource.isPlaying())
         transportSource.stop();
@@ -1695,7 +1697,7 @@ void MainComponent::exportModifiedFile()
 {
     // Export works from the in-memory buffer if a crop was applied,
     // otherwise falls back to reading from the original file
-    bool hasMemoryBuffer = (audioBuffer.getNumSamples() > 0);
+    bool hasMemoryBuffer = (sharedAudioBuffer != nullptr && sharedAudioBuffer->getNumSamples() > 0);
 
     if (!hasMemoryBuffer && (readerSource == nullptr || !currentFile.existsAsFile()))
         return;
@@ -1761,7 +1763,7 @@ void MainComponent::exportModifiedFile()
             if (hasMemoryBuffer)
             {
                 // Write from in-memory cropped buffer with gain + filters + fades applied
-                juce::AudioBuffer<float> copy(audioBuffer);
+                juce::AudioBuffer<float> copy(*sharedAudioBuffer);
                 copy.applyGain(gain);
 
                 double totalLength = (double)copy.getNumSamples() / fileSampleRate;
