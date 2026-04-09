@@ -5,8 +5,6 @@
   <MAINGROUP id="TpynUk" name="Accessible Audio">
     <GROUP id="{1C25F1E4-AB36-7E10-DF0B-EE486C8664AA}" name="Source">
       <FILE id="bV8T4B" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
-      <FILE id="Bc1tsK" name="EQDialog.cpp" compile="1" resource="0" file="Builds/VisualStudio2022/EQDialog.cpp"/>
-      <FILE id="yFu6Sm" name="EQDialog.h" compile="0" resource="0" file="Builds/VisualStudio2022/EQDialog.h"/>
       <FILE id="RqO5sY" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="yQH6Rz" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
