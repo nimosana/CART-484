@@ -42,6 +42,8 @@ private:
 	void applyCrop();
 	void openCropDialog(bool isStart);
 	void announceTime();
+    
+    void announceEffectsStatus();
 
 	std::unique_ptr<juce::MemoryAudioSource> memorySource;
 

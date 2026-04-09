@@ -43,20 +43,35 @@ void MainComponent::paint(juce::Graphics& g)
     g.setFont(14.0f);
     auto bounds = getLocalBounds().reduced(8, 8);
 
-    // --- bottom line: gain ---
-    juce::String gainInfo;
-    gainInfo << "Gain: " << juce::String(gain, 2) << "x";
-    gainInfo << "   Step: " << juce::String(gainStep, 2);
-    if (gainEditMode)
-        gainInfo << "   [arrows adjust]";
-    if (cropStart >= 0.0)
-        gainInfo << "   In: " << formatTime(cropStart);
-    if (cropEnd >= 0.0)
-        gainInfo << "   Out: " << formatTime(cropEnd);
+    // --- bottom line: gain and crop ---
+    {
+        juce::String s;
+        // Spaced to perfectly align the colons with "High Shelf (H):"
+        s << "Gain       (G): " << juce::String(gain, 2) << "x";
+        s << "   Step: " << juce::String(gainStep, 2);
+        
+        if (gainEditMode)
+            s << "  [Up/Down arrows adjust]";
+        else
+            s << "  [G to edit gain]";
 
-    g.setColour(juce::Colours::white);
-    g.drawFittedText(gainInfo, bounds.removeFromBottom(24),
-        juce::Justification::centredLeft, 1);
+        // Append crop markers if they exist
+        if (cropStart >= 0.0)
+            s << "   In: " << formatTime(cropStart);
+        if (cropEnd >= 0.0)
+            s << "   Out: " << formatTime(cropEnd);
+
+        // Highlight orange if gain is modified (not 1.0x), otherwise grey out like disabled effects
+        bool isGainModified = (std::abs(gain - 1.0f) > 0.001f);
+        g.setColour(isGainModified ? juce::Colours::orange : juce::Colours::grey);
+        
+        // If it's currently being edited, you could also force it to be bright so the user knows it's active
+        if (gainEditMode)
+            g.setColour(juce::Colours::white);
+
+        g.drawFittedText(s, bounds.removeFromBottom(24),
+            juce::Justification::centredLeft, 1);
+    }
 
     // --- second line: high shelf ---
     {
@@ -562,7 +577,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     bool isCommand = false;
     if (kc == 'g' || kc == 'G' || kc == 'e' || kc == 'E' ||
         kc == 'q' || kc == 'Q' || kc == 'w' || kc == 'W' ||
-        kc == 'l' || kc == 'L' || kc == 'h' || kc == 'H')
+        kc == 'l' || kc == 'L' || kc == 'h' || kc == 'H' || kc == 's' || kc == 'S')
     {
         isCommand = true;
     }
@@ -570,7 +585,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     if (isCommand && readerSource == nullptr && memorySource == nullptr && transportSource.getLengthInSeconds() <= 0.0)
     {
         juce::AccessibilityHandler::postAnnouncement(
-            "press CTRL+O to open .wav file",
+            "No audio file loaded. Press Ctrl + O to open a .wav file.",
             juce::AccessibilityHandler::AnnouncementPriority::high);
         return true;
     }
@@ -605,7 +620,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             logEffect("Gain edit mode " + juce::String(gainEditMode ? "enabled" : "disabled"));
 
             juce::AccessibilityHandler::postAnnouncement(
-                gainEditMode ? "Gain edit mode enabled." : "Gain edit mode disabled.",
+                gainEditMode ? "Gain edit mode enabled. Use up and down arrow keys to edit gain." : "Gain edit mode disabled.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
             return true;
@@ -617,11 +632,18 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             announceTime();
             return true;
         }
+        
+        else if (c == 's' && !ctrlDown && !altDown)
+                {
+                    announceEffectsStatus();
+                    return true;
+                }
+        
         else if (c == 'e' && !ctrlDown && !altDown)
         {
             eqEnabled = !eqEnabled;
             juce::AccessibilityHandler::postAnnouncement(
-                eqEnabled ? "EQ on." : "EQ off.",
+                eqEnabled ? "EQ on. Press Ctrl + E to enter EQ band editing mode." : "EQ off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
             return true;
@@ -661,7 +683,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             lowPassEnabled = !lowPassEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 lowPassEnabled
-                ? "Low shelf filter on. " + juce::String((int)lowShelfFreq) + " Hz."
+                ? "Low shelf filter on. " + juce::String((int)lowShelfFreq) + " Hz. Press Ctrl + L to edit frequencies."
                 : "Low shelf filter off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             lowShelfFilter[0].reset();
@@ -677,7 +699,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             highPassEnabled = !highPassEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 highPassEnabled
-                ? "High shelf filter on. " + juce::String((int)highShelfFreq) + " Hz."
+                ? "High shelf filter on. " + juce::String((int)highShelfFreq) + " Hz. Press Ctrl + H to edit frequencies."
                 : "High shelf filter off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             highShelfFilter[0].reset();
@@ -693,7 +715,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             fadeInEnabled = !fadeInEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeInEnabled
-                ? "Fade in on. " + juce::String(fadeInDuration, 1) + " seconds."
+                ? "Fade in on. " + juce::String(fadeInDuration, 1) + " seconds. Press Ctrl + Q to edit duration."
                 : "Fade in off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
@@ -707,7 +729,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             fadeOutEnabled = !fadeOutEnabled;
             juce::AccessibilityHandler::postAnnouncement(
                 fadeOutEnabled
-                ? "Fade out on. " + juce::String(fadeOutDuration, 1) + " seconds."
+                ? "Fade out on. " + juce::String(fadeOutDuration, 1) + " seconds. Press Ctrl + W to edit duration."
                 : "Fade out off.",
                 juce::AccessibilityHandler::AnnouncementPriority::high);
             repaint();
@@ -791,6 +813,16 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
             bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
                 lowFreqEditMode || highFreqEditMode;
             bool targetState = anyOther ? true : !eqEditMode;
+            
+            // Refuse to enter edit mode when the EQ is disabled
+            if (targetState && !eqEnabled)
+                        {
+                            juce::AccessibilityHandler::postAnnouncement(
+                                "EQ is off. Press E to enable it first.",
+                                juce::AccessibilityHandler::AnnouncementPriority::high);
+                            return true;
+                        }
+            
             gainEditMode = fadeInEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = false;
             eqEditMode = targetState;
 
@@ -883,6 +915,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (key.getKeyCode() == juce::KeyPress::homeKey)
         {
             transportSource.setPosition(0.0); // start of file
+            
+            
+            
             repaint();
             return true;
         }
@@ -891,6 +926,11 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         {
             double length = transportSource.getLengthInSeconds();
             transportSource.setPosition(length); // end of file
+            
+            juce::AccessibilityHandler::postAnnouncement(
+                            "Moved to end, " + formatTime(length),
+                            juce::AccessibilityHandler::AnnouncementPriority::high);
+            
             repaint();
             return true;
         }
@@ -1146,14 +1186,14 @@ juce::PopupMenu MainComponent::getMenuForIndex(
         menu.addItem(6, "Set Crop Start (type time)");
         menu.addItem(7, "Set Crop End (type time)");
         menu.addItem(8, "Apply Crop", cropStart >= 0.0 && cropEnd >= 0.0);
-        menu.addItem(9, "Undo (Ctrl+Z)", !undoStack.empty());
-        menu.addItem(10, "Redo (Ctrl+Y)", !redoStack.empty());
+        menu.addItem(9, "Undo (Ctrl + Z)", !undoStack.empty());
+        menu.addItem(10, "Redo (Ctrl + Y)", !redoStack.empty());
         menu.addSeparator();
 
     }
     else if (menuIndex == 3) // Help
     {
-        menu.addItem(20, "Getting Started");
+        menu.addItem(20, "Getting Started (Click for Overview)");
         menu.addSeparator();
 
         // Menu Shortcuts submenu
@@ -1179,6 +1219,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(
 
         // Effects submenu
         juce::PopupMenu effectsShortcuts;
+        effectsShortcuts.addItem(39, "Announce effects status: S");
         effectsShortcuts.addItem(40, "Toggle Gain Editing Mode: G");
         effectsShortcuts.addItem(41, "Increase or decrease gain: Up and Down Arrow keys");
         effectsShortcuts.addItem(42, "Toggle Low Shelf Filter: L");
@@ -1252,8 +1293,8 @@ void MainComponent::menuItemSelected(int menuItemID, int)
 
     case 21: case 22: case 23: case 24: case 25: case 26:
     case 30: case 31: case 32: case 33: case 34: case 35: case 36:
-    case 40: case 41: case 42: case 43: case 44: case 45:
-    case 46: case 47: case 48: case 49: case 50: case 51:
+        case 39: case 40: case 41: case 42: case 43: case 44: case 45:
+        case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53:
         break;
 
     case 90:
@@ -1532,6 +1573,51 @@ void MainComponent::applyCrop()
     repaint();
 }
 
+void MainComponent::announceEffectsStatus()
+{
+    juce::StringArray activeEffects;
+
+    // Check Gain (assuming 1.0 is the default/neutral state)
+    if (gain != 1.0f)
+        activeEffects.add("Gain is set to " + juce::String(gain, 2) + "x.");
+
+    if (lowPassEnabled)
+        activeEffects.add("Low shelf filter is on at " + juce::String((int)lowShelfFreq) + " Hertz.");
+
+    if (highPassEnabled)
+        activeEffects.add("High shelf filter is on at " + juce::String((int)highShelfFreq) + " Hertz.");
+
+    if (fadeInEnabled)
+        activeEffects.add("Fade in is on for " + juce::String(fadeInDuration, 1) + " seconds.");
+
+    if (fadeOutEnabled)
+        activeEffects.add("Fade out is on for " + juce::String(fadeOutDuration, 1) + " seconds.");
+
+    if (eqEnabled)
+    {
+        int activeBands = 0;
+        for (auto& b : eqBands)
+        {
+            if (b.enabled) activeBands++;
+        }
+        activeEffects.add("EQ is on with " + juce::String(activeBands) + " active bands.");
+    }
+
+    juce::String msg;
+    if (activeEffects.isEmpty())
+    {
+        msg = "No effects are currently applied.";
+    }
+    else
+    {
+        msg = "Current status: " + activeEffects.joinIntoString(" ");
+    }
+
+    juce::AccessibilityHandler::postAnnouncement(
+        msg,
+        juce::AccessibilityHandler::AnnouncementPriority::high);
+}
+
 //==============================================================================
 void MainComponent::importFile()
 {
@@ -1585,6 +1671,11 @@ void MainComponent::importFile()
                 newSource->getAudioFormatReader()->sampleRate);
 
             readerSource.reset(newSource.release());
+            
+            juce::AccessibilityHandler::postAnnouncement(
+                            currentFile.getFileName() + " loaded successfully.",
+                            juce::AccessibilityHandler::AnnouncementPriority::high);
+            
         });
 }
 
