@@ -4,9 +4,142 @@
 
 #include <memory>
 #include <deque>
+class MainComponent;
 
+class MenuBarButton : public juce::TextButton
+{
+public:
+    MenuBarButton(const juce::String& name) : juce::TextButton(name)
+    {
+        setTitle(name);
+        setDescription(name + " menu");
+        setWantsKeyboardFocus(true);
+        setAccessible(true);
+    }
 
+protected:
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
+    {
+        // Report as a ComboBox role — JAWS announces these as
+        // "press Enter to open" instead of "press Space"
+        class MenuButtonAccessHandler : public juce::AccessibilityHandler
+        {
+        public:
+            MenuButtonAccessHandler(juce::TextButton& btn)
+                : juce::AccessibilityHandler(
+                    btn,
+                    juce::AccessibilityRole::menuItem,
+                    juce::AccessibilityActions()
+                    .addAction(juce::AccessibilityActionType::press,
+                        [&btn] { btn.triggerClick(); }))
+            {
+            }
 
+            juce::String getTitle() const override
+            {
+                return getComponent().getTitle();
+            }
+
+            juce::String getHelp() const override
+            {
+                return "Press Enter to open menu";
+            }
+        };
+
+        return std::make_unique<MenuButtonAccessHandler>(*this);
+    }
+};
+
+class AccessibleMenuBar : public juce::Component,
+    public juce::KeyListener
+{
+public:
+    AccessibleMenuBar(juce::MenuBarModel* model, MainComponent* owner)
+        : model(model), owner(owner)
+    {
+        rebuild();
+    }
+
+    void rebuild()
+    {
+        buttons.clear();
+        removeAllChildren();
+        if (model == nullptr) return;
+
+        auto names = model->getMenuBarNames();
+        for (int i = 0; i < names.size(); ++i)
+        {
+            auto* btn = new MenuBarButton(names[i]);
+
+            int idx = i;
+            btn->onClick = [this, idx]() {
+                showMenu(idx);
+                };
+
+            // Also trigger on Enter key specifically
+            btn->addKeyListener(this);
+
+            addAndMakeVisible(btn);
+            buttons.add(btn);
+        }
+        resized();
+    }
+
+    bool keyPressed(const juce::KeyPress& key, juce::Component* src) override
+    {
+        // Make Enter open the menu, same as click
+        if (key == juce::KeyPress::returnKey)
+        {
+            for (int i = 0; i < buttons.size(); ++i)
+            {
+                if (src == buttons[i])
+                {
+                    showMenu(i);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void showMenu(int index)
+    {
+        if (model == nullptr || index >= buttons.size()) return;
+        auto menu = model->getMenuForIndex(index, {});
+        auto* btn = buttons[index];
+
+        menu.showMenuAsync(
+            juce::PopupMenu::Options()
+            .withTargetComponent(btn),
+            [this, index](int result) {
+                if (result != 0 && model != nullptr)
+                    model->menuItemSelected(result, index);
+            });
+    }
+
+    void openMenuByIndex(int index)
+    {
+        showMenu(index);
+    }
+
+    void resized() override
+    {
+        if (buttons.isEmpty()) return;
+        int x = 4;
+        int btnH = getHeight();
+        for (auto* btn : buttons)
+        {
+            int w = juce::Font(14.0f).getStringWidth(btn->getButtonText()) + 20;
+            btn->setBounds(x, 0, w, btnH);
+            x += w + 2;
+        }
+    }
+
+private:
+    juce::MenuBarModel* model;
+    MainComponent* owner;
+    juce::OwnedArray<MenuBarButton>    buttons;
+};
 class MainComponent : public juce::AudioAppComponent,
 	public juce::KeyListener,
 	public juce::MenuBarModel
@@ -58,7 +191,7 @@ private:
 	// Track menu navigation
 	int activeMenuIndex = -1;
 	juce::PopupMenu activePopup;
-	std::unique_ptr<juce::MenuBarComponent> menuBar;
+    std::unique_ptr<AccessibleMenuBar> menuBar;;
 	// Audio
 	juce::AudioFormatManager formatManager;
 	std::unique_ptr<juce::AudioFormatReaderSource> readerSource;

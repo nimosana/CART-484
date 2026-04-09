@@ -8,12 +8,10 @@ MainComponent::MainComponent()
 
     formatManager.registerBasicFormats();
 
-    menuBar = std::make_unique<juce::MenuBarComponent>(this);
+    menuBar = std::make_unique<AccessibleMenuBar>(this, this);
     addAndMakeVisible(menuBar.get());
-    if (menuBar) {
-        menuBar->setModel(this);
-        menuBar->setBounds(0, 0, getWidth(), 25);
-    }
+    menuBar->setBounds(0, 0, getWidth(), 25);
+
     setWantsKeyboardFocus(true);
 
     addKeyListener(this);
@@ -27,6 +25,7 @@ MainComponent::MainComponent()
         });
 
     setAudioChannels(0, 2);
+
 }
 
 MainComponent::~MainComponent()
@@ -1119,24 +1118,22 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     {
         if (c == 'f')
         {
-            if (menuBar) menuBar->showMenu(0);
+            if (menuBar) menuBar->openMenuByIndex(0);
             return true;
         }
         if (c == 'p')
         {
-            if (menuBar) menuBar->showMenu(1);
+            if (menuBar) menuBar->openMenuByIndex(1);
             return true;
         }
         if (c == 'e')
         {
-            if (menuBar) menuBar->showMenu(2);
+            if (menuBar) menuBar->openMenuByIndex(2);
             return true;
         }
-
-
         if (c == 'h' && !key.getModifiers().isCtrlDown())
         {
-            if (menuBar) menuBar->showMenu(3);
+            if (menuBar) menuBar->openMenuByIndex(3);
             return true;
         }
     }
