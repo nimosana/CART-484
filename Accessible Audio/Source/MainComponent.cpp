@@ -611,51 +611,51 @@ juce::String MainComponent::formatTime(double seconds)
 }
 
 //==============================================================================
-void MainComponent::mouseDown(const juce::MouseEvent& e)
-{
-    grabKeyboardFocus();
-    if (eqSlidersArea.contains(e.getPosition()))
-    {
-        int axisW = 28;
-        int trackLeft = eqSlidersArea.getX() + axisW;
-        int trackAreaWidth = eqSlidersArea.getWidth() - axisW;
-        int bandW = trackAreaWidth / kNumEQBands;
-        int x = e.getPosition().getX();
-        int b = (x - trackLeft) / bandW;
-        if (b >= 0 && b < kNumEQBands)
-        {
-            eqSelectedBand = b;
-            eqEditMode = true; // Auto select & enter edit mode
-            gainEditMode = fadeInEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = false;
-            mouseDrag(e); // apply initial gain change
-            juce::AccessibilityHandler::postAnnouncement(
-                "EQ band " + eqBands[b].name + " selected.",
-                juce::AccessibilityHandler::AnnouncementPriority::high);
-        }
-    }
-}
+//void MainComponent::mouseDown(const juce::MouseEvent& e)
+//{
+//    //grabKeyboardFocus();
+//    //if (eqSlidersArea.contains(e.getPosition()))
+//    //{
+//    //    int axisW = 28;
+//    //    int trackLeft = eqSlidersArea.getX() + axisW;
+//    //    int trackAreaWidth = eqSlidersArea.getWidth() - axisW;
+//    //    int bandW = trackAreaWidth / kNumEQBands;
+//    //    int x = e.getPosition().getX();
+//    //    int b = (x - trackLeft) / bandW;
+//    //    if (b >= 0 && b < kNumEQBands)
+//    //    {
+//    //        eqSelectedBand = b;
+//    //        eqEditMode = true; // Auto select & enter edit mode
+//    //        gainEditMode = fadeInEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = false;
+//    //        mouseDrag(e); // apply initial gain change
+//    //        juce::AccessibilityHandler::postAnnouncement(
+//    //            "EQ band " + eqBands[b].name + " selected.",
+//    //            juce::AccessibilityHandler::AnnouncementPriority::high);
+//    //    }
+//    //}
+//}
 
-void MainComponent::mouseDrag(const juce::MouseEvent& e)
-{
-    if (eqSlidersArea.contains(e.getPosition()) || eqEditMode)
-    {
-        int labelTopH = 18;
-        int labelBotH = 16;
-        int trackTop = eqSlidersArea.getY() + labelTopH;
-        int trackH = eqSlidersArea.getHeight() - labelTopH - labelBotH;
-        int y = e.getPosition().getY();
-        y = juce::jlimit(trackTop, trackTop + trackH, y);
-        float frac = (float)(y - trackTop) / (float)trackH;
-        double db = (0.5 - frac) * 24.0;
-        if (eqSelectedBand >= 0 && eqSelectedBand < kNumEQBands)
-        {
-            eqBands[eqSelectedBand].gainDB = juce::jlimit(-12.0, 12.0, db);
-            eqBands[eqSelectedBand].enabled = true; // auto enable when touched
-            updateEQCoefficients();
-            repaint();
-        }
-    }
-}
+//void MainComponent::mouseDrag(const juce::MouseEvent& e)
+//{
+//    if (eqSlidersArea.contains(e.getPosition()) || eqEditMode)
+//    {
+//        int labelTopH = 18;
+//        int labelBotH = 16;
+//        int trackTop = eqSlidersArea.getY() + labelTopH;
+//        int trackH = eqSlidersArea.getHeight() - labelTopH - labelBotH;
+//        int y = e.getPosition().getY();
+//        y = juce::jlimit(trackTop, trackTop + trackH, y);
+//        float frac = (float)(y - trackTop) / (float)trackH;
+//        double db = (0.5 - frac) * 24.0;
+//        if (eqSelectedBand >= 0 && eqSelectedBand < kNumEQBands)
+//        {
+//            eqBands[eqSelectedBand].gainDB = juce::jlimit(-12.0, 12.0, db);
+//            eqBands[eqSelectedBand].enabled = true; // auto enable when touched
+//            updateEQCoefficients();
+//            repaint();
+//        }
+//    }
+//}
 
 //==============================================================================
 bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)

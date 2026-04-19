@@ -7,9 +7,7 @@
 class DarkLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    // ------------------------------------------------------------------
     // Colour constants (accessible as static members)
-    // ------------------------------------------------------------------
     static constexpr uint32_t bg0    = 0xff0a0a0a;
     static constexpr uint32_t bg1    = 0xff111111;
     static constexpr uint32_t bg2    = 0xff181818;
@@ -313,8 +311,8 @@ public:
     bool keyPressed(const juce::KeyPress& key, juce::Component*) override;
 
     // Mouse (EQ dragging)
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
+    //void mouseDown(const juce::MouseEvent& e) override;
+    //void mouseDrag(const juce::MouseEvent& e) override;
 
     // Menu
     juce::StringArray getMenuBarNames() override;
@@ -375,7 +373,7 @@ private:
     juce::StringArray effectHistory;
     void logEffect(const juce::String& description);
 
-    static constexpr int kNumEQBands = 9;
+    static constexpr int kNumEQBands = 11;
     struct EQBand {
         juce::String name;
         double freq, gainDB, Q;
@@ -406,11 +404,12 @@ private:
     void restoreState(const AppState& state);
 
     EQBand eqBands[kNumEQBands] = {
-        {"63 Hz", 63.0, 0.0, 1.0, false}, {"125 Hz", 125.0, 0.0, 1.0, false},
-        {"250 Hz", 250.0, 0.0, 1.0, false}, {"500 Hz", 500.0, 0.0, 1.0, false},
-        {"1k Hz", 1000.0, 0.0, 1.0, false}, {"2k Hz", 2000.0, 0.0, 1.0, false},
-        {"4k Hz", 4000.0, 0.0, 1.0, false}, {"8k Hz", 8000.0, 0.0, 1.0, false},
-        {"16k Hz", 16000.0, 0.0, 1.0, false}
+        {"20 Hz", 20.0, 0.0, 1.0, false}, {"63 Hz", 63.0, 0.0, 1.0, false}, 
+        {"125 Hz", 125.0, 0.0, 1.0, false}, {"250 Hz", 250.0, 0.0, 1.0, false},
+        {"500 Hz", 500.0, 0.0, 1.0, false}, {"1k Hz", 1000.0, 0.0, 1.0, false},
+        {"2k Hz", 2000.0, 0.0, 1.0, false}, {"4k Hz", 4000.0, 0.0, 1.0, false},
+        {"8k Hz", 8000.0, 0.0, 1.0, false}, {"16k Hz", 16000.0, 0.0, 1.0, false},
+        { "20k Hz", 20000.0, 0.0, 1.0, false }
     };
 
     bool eqEnabled = false, eqEditMode = false;
