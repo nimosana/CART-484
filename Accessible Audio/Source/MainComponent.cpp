@@ -87,7 +87,23 @@ void MainComponent::paint(juce::Graphics& g)
     }
 
     // ── Frequency Response Curve ────────────────────────────────────────────
-    auto curveBounds = bounds.removeFromTop(140);
+    // Dynamically divide remaining height equally between the curve and the EQ
+    // section, so both resize naturally when the window is resized / full-screened.
+    {
+        // Fixed-height sections that sit between the curve and the EQ:
+        //   gap(14) + timeline(75) + gap(14) + effects-grid(3*72+2*12=240)
+        //   + gap(14) + crop(70) + gap(14) + eq-header(30+6+6) = 477
+        const int kFixedBetween = 14 + 75 + 14 + (3 * 72 + 2 * 12) + 14 + 70 + 14 + 30 + 12;
+        const int kMinCurve = 90;
+        const int kMinEQ = 110;
+        int totalFlex = juce::jmax(kMinCurve + kMinEQ,
+            bounds.getHeight() - kFixedBetween);
+        // Store the computed heights so the EQ section can use them later.
+        // We write them into local vars; the EQ section below reads eqFlexH.
+        eqFlexCurveH = juce::jmax(kMinCurve, totalFlex / 2);
+        eqFlexH = juce::jmax(kMinEQ, totalFlex - eqFlexCurveH);
+    }
+    auto curveBounds = bounds.removeFromTop(eqFlexCurveH);
     g.setColour(juce::Colour(DarkLookAndFeel::bg2));
     g.fillRoundedRectangle(curveBounds.toFloat(), 6.0f);
     g.setColour(juce::Colour(DarkLookAndFeel::line1));
@@ -144,8 +160,10 @@ void MainComponent::paint(juce::Graphics& g)
                     if (!eqBands[b].enabled || eqBands[b].freq <= 0.0) continue;
                     double ratio = freq / eqBands[b].freq;
                     if (ratio <= 0.0) continue;
-                    double w = std::log(ratio) * std::log(ratio);
-                    db += eqBands[b].gainDB * std::exp(-w * 3.5);
+                    double logRatio = std::log(ratio);
+                    double q = juce::jmax(0.1, eqBands[b].Q);
+                    // Gaussian approximation of a peaking filter; Q scales width
+                    db += eqBands[b].gainDB * std::exp(-logRatio * logRatio * q * q * 4.0);
                 }
             }
             double yProp = juce::jlimit(0.0, 1.0, juce::jmap(db, 24.0, -24.0, 0.0, 1.0));
@@ -270,9 +288,9 @@ void MainComponent::paint(juce::Graphics& g)
 
     struct EffectInfo { juce::String title, status; bool active, edit; juce::Colour accent; };
     std::array<EffectInfo, 6> effects = {
-        EffectInfo{ "Gain",       juce::String(gain, 2) + "x" + (gainEditMode ? " | ↑↓" : " | G"),       std::abs(gain - 1.0f) > 0.01f, gainEditMode,       juce::Colour(DarkLookAndFeel::accentOrange) },
+        EffectInfo{ "Gain (G)",       juce::String(gain, 2) + "x" + (gainEditMode ? " | ↑↓" : " | G"),       std::abs(gain - 1.0f) > 0.01f, gainEditMode,       juce::Colour(DarkLookAndFeel::accentOrange) },
         EffectInfo{
-            "Mid Fade",
+            "Mid Fade (M)",
             juce::String(midFadeEnabled ? "ON" : "off") +
             " | Pos: " + juce::String(midFadeCenter, 1) + "s" +
             " | Dur: " + juce::String(midFadeDuration, 1) + "s" +
@@ -281,10 +299,10 @@ void MainComponent::paint(juce::Graphics& g)
             midFadeEditMode,
             juce::Colour(DarkLookAndFeel::accentPink)
         },
-        EffectInfo{ "Fade In",    juce::String(fadeInEnabled ? "ON" : "off") + "  " + juce::String(fadeInDuration, 1) + "s" + (fadeInEditMode ? " | ↑↓" : " | Ctrl+Q"), fadeInEnabled, fadeInEditMode,  juce::Colour(DarkLookAndFeel::accentYellow) },
-        EffectInfo{ "Fade Out",   juce::String(fadeOutEnabled ? "ON" : "off") + "  " + juce::String(fadeOutDuration, 1) + "s" + (fadeOutEditMode ? " | ↑↓" : " | Ctrl+W"), fadeOutEnabled, fadeOutEditMode, juce::Colour(DarkLookAndFeel::accentGold) },
-        EffectInfo{ "Low Shelf",  juce::String(lowPassEnabled ? "ON" : "off") + "  " + juce::String((int)lowShelfFreq) + "Hz" + (lowFreqEditMode ? " | ↑↓" : " | Ctrl+L"), lowPassEnabled, lowFreqEditMode,  juce::Colour(DarkLookAndFeel::accentBlue) },
-        EffectInfo{ "High Shelf", juce::String(highPassEnabled ? "ON" : "off") + "  " + juce::String((int)highShelfFreq) + "Hz" + (highFreqEditMode ? " | ↑↓" : " | Ctrl+H"), highPassEnabled, highFreqEditMode, juce::Colour(DarkLookAndFeel::accentCyan) }
+        EffectInfo{ "Fade In (Q)",    juce::String(fadeInEnabled ? "ON" : "off") + "  " + juce::String(fadeInDuration, 1) + "s" + (fadeInEditMode ? " | ↑↓" : " | Ctrl+Q"), fadeInEnabled, fadeInEditMode,  juce::Colour(DarkLookAndFeel::accentYellow) },
+        EffectInfo{ "Fade Out (W)",   juce::String(fadeOutEnabled ? "ON" : "off") + "  " + juce::String(fadeOutDuration, 1) + "s" + (fadeOutEditMode ? " | ↑↓" : " | Ctrl+W"), fadeOutEnabled, fadeOutEditMode, juce::Colour(DarkLookAndFeel::accentGold) },
+        EffectInfo{ "Low Shelf (L)",  juce::String(lowPassEnabled ? "ON" : "off") + "  " + juce::String((int)lowShelfFreq) + "Hz" + (lowFreqEditMode ? " | ↑↓" : " | Ctrl+L"), lowPassEnabled, lowFreqEditMode,  juce::Colour(DarkLookAndFeel::accentBlue) },
+        EffectInfo{ "High Shelf (H)", juce::String(highPassEnabled ? "ON" : "off") + "  " + juce::String((int)highShelfFreq) + "Hz" + (highFreqEditMode ? " | ↑↓" : " | Ctrl+H"), highPassEnabled, highFreqEditMode, juce::Colour(DarkLookAndFeel::accentCyan) }
     };
 
     for (int row = 0; row < 3; ++row)
@@ -349,7 +367,8 @@ void MainComponent::paint(juce::Graphics& g)
     bounds.removeFromTop(14);
 
     // ── EQ Section ──────────────────────────────────────────────────────────
-    auto eqBounds = bounds.removeFromTop(juce::jmin(bounds.getHeight() - 10, 260)); // Caps height cleanly
+    // eqFlexH was computed above so both the curve and EQ expand proportionally.
+    auto eqBounds = bounds.removeFromTop(juce::jmax(110, juce::jmin(bounds.getHeight(), eqFlexH)));
     eqSlidersArea = eqBounds;
     g.setColour(juce::Colour(DarkLookAndFeel::bg2));
     g.fillRoundedRectangle(eqBounds.toFloat(), 6.0f);
@@ -363,7 +382,9 @@ void MainComponent::paint(juce::Graphics& g)
     juce::String eqStat = juce::String(eqEnabled ? "ON" : "off");
     int active = 0; for (auto& b : eqBands) if (b.enabled) ++active;
     eqStat += "   " + juce::String(active) + " band(s) active";
-    eqStat += eqEditMode ? "   Shift+Left/Right=band  ↑↓=gain" : "   Ctrl+E to edit";
+    eqStat += eqEditMode
+        ? ("   Shift+L/R=band  Up/Down=gain  Ctrl+Up/Down=Q  Q:" + juce::String(eqBands[eqSelectedBand].Q, 2))
+        : "   Ctrl+E to edit";
 
     g.setFont(juce::Font(17.0f, juce::Font::bold));
     g.setColour(juce::Colour(DarkLookAndFeel::accentGreen));
@@ -379,6 +400,7 @@ void MainComponent::resized()
 {
     if (menuBar)
         menuBar->setBounds(0, 0, getWidth(), 25);
+    repaint(); // Recompute dynamic curve / EQ heights
 }
 
 // Build IIR coefficients and push them into both channel filters.
@@ -579,15 +601,18 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
                     double dipEnd = midFadeCenter + halfDip;
                     if (pos >= dipStart && pos < midFadeCenter)
                     {
-                        // Ramp down: 1 → 0
-                        fadeGain *= juce::jlimit(0.0f, 1.0f,
-                            (float)((midFadeCenter - pos) / halfDip));
+                        // Fade-out: raised-cosine from 1→0.  Stays near silence
+                        // longer than a linear ramp, giving a more "dead" centre.
+                        double t = (midFadeCenter - pos) / halfDip; // 1→0 as pos→centre
+                        double sinFade = 0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t));
+                        fadeGain *= (float)sinFade;
                     }
                     else if (pos >= midFadeCenter && pos <= dipEnd)
                     {
-                        // Ramp up: 0 → 1
-                        fadeGain *= juce::jlimit(0.0f, 1.0f,
-                            (float)((pos - midFadeCenter) / halfDip));
+                        // Fade-in: raised-cosine from 0→1
+                        double t = (pos - midFadeCenter) / halfDip; // 0→1
+                        double sinFade = 0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t));
+                        fadeGain *= (float)sinFade;
                     }
                 }
                 data[s] *= fadeGain;
@@ -673,7 +698,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
     {
         isCommand = true;
     }
-    if (isCommand && readerSource == nullptr && memorySource == nullptr && transportSource.getLengthInSeconds() <= 0.0)
+    if (isCommand && !altDown && readerSource == nullptr && memorySource == nullptr && transportSource.getLengthInSeconds() <= 0.0)
     {
         juce::AccessibilityHandler::postAnnouncement(
             "No audio file loaded. Press Ctrl + O to open a .wav file.",
@@ -1018,6 +1043,23 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (key.getKeyCode() == juce::KeyPress::upKey || key.getKeyCode() == juce::KeyPress::downKey)
         {
             bool   up = (key.getKeyCode() == juce::KeyPress::upKey);
+
+            // Ctrl+Up/Down → adjust Q (bandwidth); plain Up/Down → adjust gain
+            if (ctrlDown)
+            {
+                double step = shiftDown ? 0.5 : 0.1;
+                double& q = eqBands[eqSelectedBand].Q;
+                q = juce::jlimit(0.3, 10.0, q + (up ? step : -step));
+                updateEQCoefficients();
+                juce::String msg;
+                msg << eqBands[eqSelectedBand].name
+                    << " Q: " << juce::String(q, 2)
+                    << (q < 0.7 ? " (wide)" : q > 2.0 ? " (narrow)" : "");
+                juce::AccessibilityHandler::postAnnouncement(msg, juce::AccessibilityHandler::AnnouncementPriority::high);
+                repaint();
+                return true;
+            }
+
             double step = shiftDown ? 3.0 : 1.0;
             double& db = eqBands[eqSelectedBand].gainDB;
             db = juce::jlimit(-12.0, 12.0, db + (up ? step : -step));
@@ -1948,9 +1990,15 @@ void MainComponent::exportModifiedFile()
                                 double dipStart = midFadeCenter - halfDip;
                                 double dipEnd = midFadeCenter + halfDip;
                                 if (pos >= dipStart && pos < midFadeCenter)
-                                    fadeGain *= juce::jlimit(0.0f, 1.0f, (float)((midFadeCenter - pos) / halfDip));
+                                {
+                                    double t = (midFadeCenter - pos) / halfDip;
+                                    fadeGain *= (float)(0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t)));
+                                }
                                 else if (pos >= midFadeCenter && pos <= dipEnd)
-                                    fadeGain *= juce::jlimit(0.0f, 1.0f, (float)((pos - midFadeCenter) / halfDip));
+                                {
+                                    double t = (pos - midFadeCenter) / halfDip;
+                                    fadeGain *= (float)(0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t)));
+                                }
                             }
                             data[s] *= fadeGain;
                         }
@@ -1996,9 +2044,15 @@ void MainComponent::exportModifiedFile()
                                     double dipStart = midFadeCenter - halfDip;
                                     double dipEnd = midFadeCenter + halfDip;
                                     if (pos >= dipStart && pos < midFadeCenter)
-                                        fadeGain *= juce::jlimit(0.0f, 1.0f, (float)((midFadeCenter - pos) / halfDip));
+                                    {
+                                        double t = (midFadeCenter - pos) / halfDip;
+                                        fadeGain *= (float)(0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t)));
+                                    }
                                     else if (pos >= midFadeCenter && pos <= dipEnd)
-                                        fadeGain *= juce::jlimit(0.0f, 1.0f, (float)((pos - midFadeCenter) / halfDip));
+                                    {
+                                        double t = (pos - midFadeCenter) / halfDip;
+                                        fadeGain *= (float)(0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * t)));
+                                    }
                                 }
                                 data[s] *= fadeGain;
                             }

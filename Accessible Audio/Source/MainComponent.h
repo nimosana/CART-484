@@ -8,84 +8,84 @@ class DarkLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     // Colour constants (accessible as static members)
-    static constexpr uint32_t bg0    = 0xff0a0a0a;
-    static constexpr uint32_t bg1    = 0xff111111;
-    static constexpr uint32_t bg2    = 0xff181818;
-    static constexpr uint32_t bg3    = 0xff222222;
-    static constexpr uint32_t line1  = 0xff2e2e2e;
-    static constexpr uint32_t line2  = 0xff3a3a3a;
-    
+    static constexpr uint32_t bg0 = 0xff0a0a0a;
+    static constexpr uint32_t bg1 = 0xff111111;
+    static constexpr uint32_t bg2 = 0xff181818;
+    static constexpr uint32_t bg3 = 0xff222222;
+    static constexpr uint32_t line1 = 0xff2e2e2e;
+    static constexpr uint32_t line2 = 0xff3a3a3a;
+
     // Slightly brighter for low-vision readability
-    static constexpr uint32_t txt0   = 0xfff2f2f2;
-    static constexpr uint32_t txt1   = 0xffb0b0b0;
-    static constexpr uint32_t txt2   = 0xff7a7a7a;
+    static constexpr uint32_t txt0 = 0xfff2f2f2;
+    static constexpr uint32_t txt1 = 0xffb0b0b0;
+    static constexpr uint32_t txt2 = 0xff7a7a7a;
 
     // Distinct accent colours per effect type
     static constexpr uint32_t accentOrange = 0xffffaa44; // Gain
-    static constexpr uint32_t accentPink   = 0xffff80bf; // Mid-Fade
+    static constexpr uint32_t accentPink = 0xffff80bf; // Mid-Fade
     static constexpr uint32_t accentYellow = 0xffffd966; // Fade In
-    static constexpr uint32_t accentGold   = 0xffe6b800; // Fade Out (distinct from yellow)
-    static constexpr uint32_t accentBlue   = 0xff4da6ff; // Low Shelf
-    static constexpr uint32_t accentCyan   = 0xff00bcd4; // High Shelf
-    static constexpr uint32_t accentGreen  = 0xff66d966; // EQ
+    static constexpr uint32_t accentGold = 0xffe6b800; // Fade Out (distinct from yellow)
+    static constexpr uint32_t accentBlue = 0xff4da6ff; // Low Shelf
+    static constexpr uint32_t accentCyan = 0xff00bcd4; // High Shelf
+    static constexpr uint32_t accentGreen = 0xff66d966; // EQ
     static constexpr uint32_t accentPurple = 0xffb38cff; // Crop
 
     DarkLookAndFeel()
     {
-        setColour(juce::ResizableWindow::backgroundColourId,      juce::Colour(bg0));
-        setColour(juce::DocumentWindow::textColourId,             juce::Colour(txt0));
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(bg0));
+        setColour(juce::DocumentWindow::textColourId, juce::Colour(txt0));
 
-        setColour(juce::PopupMenu::backgroundColourId,            juce::Colour(bg2));
-        setColour(juce::PopupMenu::textColourId,                  juce::Colour(txt0));
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(bg2));
+        setColour(juce::PopupMenu::textColourId, juce::Colour(txt0));
         setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(bg3));
-        setColour(juce::PopupMenu::highlightedTextColourId,       juce::Colour(txt0));
-        setColour(juce::PopupMenu::headerTextColourId,            juce::Colour(txt0));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colour(txt0));
+        setColour(juce::PopupMenu::headerTextColourId, juce::Colour(txt0));
 
-        setColour(juce::AlertWindow::backgroundColourId,          juce::Colour(bg2));
-        setColour(juce::AlertWindow::textColourId,                juce::Colour(txt0));
-        setColour(juce::AlertWindow::outlineColourId,             juce::Colour(line2));
+        setColour(juce::AlertWindow::backgroundColourId, juce::Colour(bg2));
+        setColour(juce::AlertWindow::textColourId, juce::Colour(txt0));
+        setColour(juce::AlertWindow::outlineColourId, juce::Colour(line2));
 
-        setColour(juce::TextButton::buttonColourId,               juce::Colour(bg3));
-        setColour(juce::TextButton::buttonOnColourId,             juce::Colour(0xff1e3a5a));
-        setColour(juce::TextButton::textColourOffId,              juce::Colour(txt1));
-        setColour(juce::TextButton::textColourOnId,               juce::Colour(txt0));
+        setColour(juce::TextButton::buttonColourId, juce::Colour(bg3));
+        setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff1e3a5a));
+        setColour(juce::TextButton::textColourOffId, juce::Colour(txt1));
+        setColour(juce::TextButton::textColourOnId, juce::Colour(txt0));
 
-        setColour(juce::TextEditor::backgroundColourId,           juce::Colour(bg1));
-        setColour(juce::TextEditor::textColourId,                 juce::Colour(txt0));
-        setColour(juce::TextEditor::outlineColourId,              juce::Colour(line2));
-        setColour(juce::TextEditor::focusedOutlineColourId,       juce::Colour(accentBlue));
-        setColour(juce::Label::textColourId,                      juce::Colour(txt0));
-        setColour(juce::Label::backgroundColourId,                juce::Colours::transparentBlack);
+        setColour(juce::TextEditor::backgroundColourId, juce::Colour(bg1));
+        setColour(juce::TextEditor::textColourId, juce::Colour(txt0));
+        setColour(juce::TextEditor::outlineColourId, juce::Colour(line2));
+        setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(accentBlue));
+        setColour(juce::Label::textColourId, juce::Colour(txt0));
+        setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
 
-        setColour(juce::ScrollBar::thumbColourId,                 juce::Colour(line2));
+        setColour(juce::ScrollBar::thumbColourId, juce::Colour(line2));
 
-        setColour(juce::ComboBox::backgroundColourId,             juce::Colour(bg2));
-        setColour(juce::ComboBox::textColourId,                   juce::Colour(txt0));
-        setColour(juce::ComboBox::outlineColourId,                juce::Colour(line1));
-        setColour(juce::ComboBox::arrowColourId,                  juce::Colour(txt1));
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(bg2));
+        setColour(juce::ComboBox::textColourId, juce::Colour(txt0));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(line1));
+        setColour(juce::ComboBox::arrowColourId, juce::Colour(txt1));
 
-        setColour(juce::Slider::backgroundColourId,               juce::Colour(bg2));
-        setColour(juce::Slider::trackColourId,                    juce::Colour(accentBlue));
-        setColour(juce::Slider::thumbColourId,                    juce::Colour(0xffd0e8ff));
+        setColour(juce::Slider::backgroundColourId, juce::Colour(bg2));
+        setColour(juce::Slider::trackColourId, juce::Colour(accentBlue));
+        setColour(juce::Slider::thumbColourId, juce::Colour(0xffd0e8ff));
     }
 
     // ------------------------------------------------------------------
     // MenuBar painting
     // ------------------------------------------------------------------
-    void drawMenuBarBackground(juce::Graphics & g, int w, int h,
-                               bool /*isMouseOverBar*/,
-                               juce::MenuBarComponent &) override
+    void drawMenuBarBackground(juce::Graphics& g, int w, int h,
+        bool /*isMouseOverBar*/,
+        juce::MenuBarComponent&) override
     {
         g.fillAll(juce::Colour(bg1));
         g.setColour(juce::Colour(line1));
         g.drawHorizontalLine(h - 1, 0.f, (float)w);
     }
 
-    void drawMenuBarItem(juce::Graphics & g, int w, int h,
-                         int /*itemIndex*/, const juce::String & itemText,
-                         bool isMouseOverItem, bool isMenuOpen,
-                         bool /*isMouseOverBar*/,
-                         juce::MenuBarComponent &) override
+    void drawMenuBarItem(juce::Graphics& g, int w, int h,
+        int /*itemIndex*/, const juce::String& itemText,
+        bool isMouseOverItem, bool isMenuOpen,
+        bool /*isMouseOverBar*/,
+        juce::MenuBarComponent&) override
     {
         if (isMouseOverItem || isMenuOpen)
         {
@@ -100,19 +100,19 @@ public:
     // ------------------------------------------------------------------
     // PopupMenu painting
     // ------------------------------------------------------------------
-    void drawPopupMenuBackground(juce::Graphics & g, int w, int h) override
+    void drawPopupMenuBackground(juce::Graphics& g, int w, int h) override
     {
         g.fillAll(juce::Colour(bg2));
         g.setColour(juce::Colour(line2));
         g.drawRect(0, 0, w, h, 1);
     }
 
-    void drawPopupMenuItem(juce::Graphics & g, const juce::Rectangle<int> & area,
-                           bool isSeparator, bool isActive, bool isHighlighted,
-                           bool isTicked, bool hasSubMenu,
-                           const juce::String & text, const juce::String & shortcutKeyText,
-                           const juce::Drawable* icon,
-                           const juce::Colour* textColourToUse) override
+    void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+        bool isSeparator, bool isActive, bool isHighlighted,
+        bool isTicked, bool hasSubMenu,
+        const juce::String& text, const juce::String& shortcutKeyText,
+        const juce::Drawable* icon,
+        const juce::Colour* textColourToUse) override
     {
         if (isSeparator)
         {
@@ -140,15 +140,15 @@ public:
             g.drawText(juce::CharPointer_UTF8("\xe2\x9c\x93 "), area.getX(), area.getY(), 20, area.getHeight(), juce::Justification::centred);
         }
         g.drawFittedText(text, textArea.getX() + (isTicked ? 14 : 0), textArea.getY(),
-                         textArea.getWidth(), textArea.getHeight(),
-                         juce::Justification::centredLeft, 1);
+            textArea.getWidth(), textArea.getHeight(),
+            juce::Justification::centredLeft, 1);
 
         if (shortcutKeyText.isNotEmpty())
         {
             g.setColour(juce::Colour(txt2));
             g.drawFittedText(shortcutKeyText, textArea.getX(), textArea.getY(),
-                             textArea.getWidth(), textArea.getHeight(),
-                             juce::Justification::centredRight, 1);
+                textArea.getWidth(), textArea.getHeight(),
+                juce::Justification::centredRight, 1);
         }
     }
 };
@@ -220,13 +220,9 @@ public:
         {
             auto* btn = new MenuBarButton(names[i]);
             if (laf) btn->setLookAndFeel(laf);
-            
-            int idx = i;
-            btn->onClick = [this, idx]() {
-                showMenu(idx);
-                };
 
-            // Also trigger on Enter key specifically
+            int idx = i;
+            btn->onClick = [this, idx]() { showMenu(idx); };
             btn->addKeyListener(this);
 
             addAndMakeVisible(btn);
@@ -237,7 +233,9 @@ public:
 
     bool keyPressed(const juce::KeyPress& key, juce::Component* src) override
     {
-        // Make Enter open the menu, same as click
+        // Only handle Enter/Return to open the focused menu button.
+        // Left/Right are intentionally NOT handled here so they always
+        // reach MainComponent for timeline scrubbing.
         if (key == juce::KeyPress::returnKey)
         {
             for (int i = 0; i < buttons.size(); ++i)
@@ -254,23 +252,19 @@ public:
 
     void showMenu(int index)
     {
-        if (model == nullptr || index >= buttons.size()) return;
+        if (model == nullptr || index < 0 || index >= buttons.size()) return;
         auto menu = model->getMenuForIndex(index, {});
         auto* btn = buttons[index];
 
         menu.showMenuAsync(
-            juce::PopupMenu::Options()
-            .withTargetComponent(btn),
+            juce::PopupMenu::Options().withTargetComponent(btn),
             [this, index](int result) {
                 if (result != 0 && model != nullptr)
                     model->menuItemSelected(result, index);
             });
     }
 
-    void openMenuByIndex(int index)
-    {
-        showMenu(index);
-    }
+    void openMenuByIndex(int index) { showMenu(index); }
 
     void resized() override
     {
@@ -289,12 +283,12 @@ private:
     juce::LookAndFeel* laf = nullptr;
     juce::MenuBarModel* model;
     MainComponent* owner;
-    juce::OwnedArray<MenuBarButton>    buttons;
+    juce::OwnedArray<MenuBarButton> buttons;
 };
 class MainComponent : public juce::AudioAppComponent,
-                      public juce::KeyListener,
-                      public juce::MenuBarModel,
-                    private juce::Timer
+    public juce::KeyListener,
+    public juce::MenuBarModel,
+    private juce::Timer
 {
 public:
     MainComponent();
@@ -318,7 +312,7 @@ public:
     juce::StringArray getMenuBarNames() override;
     juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String&) override;
     void menuItemSelected(int menuItemID, int) override;
-    
+
     void timerCallback() override { repaint(); }
 
 private:
@@ -330,7 +324,7 @@ private:
     void openCropDialog(bool isStart);
     void announceTime();
     void announceEffectsStatus();
-    
+
     DarkLookAndFeel darkLAF;
 
     std::unique_ptr<juce::MemoryAudioSource> memorySource;
@@ -404,7 +398,7 @@ private:
     void restoreState(const AppState& state);
 
     EQBand eqBands[kNumEQBands] = {
-        {"20 Hz", 20.0, 0.0, 1.0, false}, {"63 Hz", 63.0, 0.0, 1.0, false}, 
+        {"20 Hz", 20.0, 0.0, 1.0, false}, {"63 Hz", 63.0, 0.0, 1.0, false},
         {"125 Hz", 125.0, 0.0, 1.0, false}, {"250 Hz", 250.0, 0.0, 1.0, false},
         {"500 Hz", 500.0, 0.0, 1.0, false}, {"1k Hz", 1000.0, 0.0, 1.0, false},
         {"2k Hz", 2000.0, 0.0, 1.0, false}, {"4k Hz", 4000.0, 0.0, 1.0, false},
@@ -416,6 +410,10 @@ private:
     int eqSelectedBand = 0;
     juce::Rectangle<int> eqSlidersArea;
     juce::IIRFilter eqFilter[kNumEQBands][2];
+
+    // Dynamic layout: computed each paint() so curve+EQ share remaining height
+    int eqFlexCurveH = 140;
+    int eqFlexH = 200;
 
     void updateEQCoefficients();
     void applyEQToBuffer(float* data, int numSamples, int channel);
