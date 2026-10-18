@@ -1,62 +1,58 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
+#define SDL_MAIN_HANDLED
+#include <SDL2/SDL.h>
+//#include <SDL2/SDL_ttf.h>
 
-
-
-class JuicegangApplication : public juce::JUCEApplication
-{
+class JuicegangApplication : public juce::JUCEApplication {
 public:
-    JuicegangApplication() {}
+	JuicegangApplication() {}
 
-    const juce::String getApplicationName() override { return ProjectInfo::projectName; }
-    const juce::String getApplicationVersion() override { return ProjectInfo::versionString; }
-    bool moreThanOneInstanceAllowed() override { return true; }
+	const juce::String getApplicationName() override { return ProjectInfo::projectName; }
+	const juce::String getApplicationVersion() override { return ProjectInfo::versionString; }
+	bool moreThanOneInstanceAllowed() override { return true; }
 
-    void initialise(const juce::String&) override
-    {
-        mainWindow.reset(new MainWindow(getApplicationName()));
-    }
+	void initialise(const juce::String&) override {
+		mainWindow.reset(new MainWindow(getApplicationName()));
+	}
 
-    void shutdown() override
-    {
-        mainWindow = nullptr;
-    }
+	void shutdown() override {
+		mainWindow = nullptr;
+	}
 
-    void systemRequestedQuit() override
-    {
-        quit();
-    }
+	void systemRequestedQuit() override {
+		quit();
+	}
 
-    class MainWindow : public juce::DocumentWindow
-    {
-    public:
-        MainWindow(juce::String name)
-            : DocumentWindow(name,
-                juce::Desktop::getInstance().getDefaultLookAndFeel()
-                .findColour(juce::ResizableWindow::backgroundColourId),
-                DocumentWindow::allButtons)
-        {
-            //setResizable(true, true);
-            setUsingNativeTitleBar(true);
-            setContentOwned(new MainComponent(), true);
-            centreWithSize(getWidth(), getHeight());
-            setVisible(true);
-            setFullScreen(true); 
+	class MainWindow : public juce::DocumentWindow
+	{
+	public:
+		MainWindow(juce::String name)
+			: DocumentWindow(name,
+				juce::Desktop::getInstance().getDefaultLookAndFeel()
+				.findColour(juce::ResizableWindow::backgroundColourId),
+				DocumentWindow::allButtons)
+		{
+			//setResizable(true, true);
+			setUsingNativeTitleBar(true);
+			setContentOwned(new MainComponent(), true);
+			centreWithSize(getWidth(), getHeight());
+			setVisible(true);
+			setFullScreen(true);
 
-            // Ensure the content component owns keyboard focus immediately,
-            // so keyboard shortcuts work without requiring an initial click.
-            if (auto* content = getContentComponent())
-                content->grabKeyboardFocus();
-        }
+			// Ensure the content component owns keyboard focus immediately,
+			// so keyboard shortcuts work without requiring an initial click.
+			if (auto* content = getContentComponent())
+				content->grabKeyboardFocus();
+		}
 
-        void closeButtonPressed() override
-        {
-            juce::JUCEApplication::getInstance()->systemRequestedQuit();
-        }
-    };
+		void closeButtonPressed() override {
+			juce::JUCEApplication::getInstance()->systemRequestedQuit();
+		}
+	};
 
 private:
-    std::unique_ptr<MainWindow> mainWindow;
+	std::unique_ptr<MainWindow> mainWindow;
 };
 
 START_JUCE_APPLICATION(JuicegangApplication)

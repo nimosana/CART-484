@@ -4,6 +4,27 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="TpynUk" name="Accessible Audio">
     <GROUP id="{1C25F1E4-AB36-7E10-DF0B-EE486C8664AA}" name="Source">
+      <FILE id="tUCc6L" name="AccessibleMenuBar.h" compile="0" resource="0"
+            file="Source/UI/AccessibleMenuBar.h"/>
+      <FILE id="QhGd1y" name="CropDialog.h" compile="0" resource="0" file="Source/UI/CropDialog.h"/>
+      <FILE id="pj3eS9" name="DarkLookAndFeel.h" compile="0" resource="0"
+            file="Source/LookAndFeel/DarkLookAndFeel.h"/>
+      <FILE id="Z3KPDt" name="MainComponentAccessibility.cpp" compile="1"
+            resource="0" file="Source/MainComponentAccessibility.cpp"/>
+      <FILE id="TghuON" name="MainComponentAudio.cpp" compile="1" resource="0"
+            file="Source/MainComponentAudio.cpp"/>
+      <FILE id="LeNxNj" name="MainComponentCrop.cpp" compile="1" resource="0"
+            file="Source/MainComponentCrop.cpp"/>
+      <FILE id="PERhAS" name="MainComponentEQ.cpp" compile="1" resource="0"
+            file="Source/MainComponentEQ.cpp"/>
+      <FILE id="npYZ9M" name="MainComponentFile.cpp" compile="1" resource="0"
+            file="Source/MainComponentFile.cpp"/>
+      <FILE id="z3s3sy" name="MainComponentInput.cpp" compile="1" resource="0"
+            file="Source/MainComponentInput.cpp"/>
+      <FILE id="Jv32U8" name="MainComponentMenu.cpp" compile="1" resource="0"
+            file="Source/MainComponentMenu.cpp"/>
+      <FILE id="yAKsCA" name="MainComponentUndoRedo.cpp" compile="1" resource="0"
+            file="Source/MainComponentUndoRedo.cpp"/>
       <FILE id="bV8T4B" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="RqO5sY" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="yQH6Rz" name="MainComponent.cpp" compile="1" resource="0"
