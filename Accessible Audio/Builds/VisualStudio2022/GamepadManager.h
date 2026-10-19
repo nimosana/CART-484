@@ -121,4 +121,4 @@ private:
 	SDL_JoystickID padInstanceId = -1;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GamepadManager)
-}; #pragma once
+};

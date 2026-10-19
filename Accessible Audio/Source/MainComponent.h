@@ -3,6 +3,7 @@
 #include "UI/CropDialog.h"
 #include "LookAndFeel/DarkLookAndFeel.h"
 #include "UI/AccessibleMenuBar.h"
+#include "GamepadManager.h"
 #include <deque>
 #include <array>
 
