@@ -7,12 +7,12 @@
 MainComponent::MainComponent()
 {
 	juce::LookAndFeel::setDefaultLookAndFeel(&darkLAF);
-	GamepadManager gamepad;
 	setLookAndFeel(&darkLAF);
 	setSize(600, 800);  // Slightly wider for better proportions
 	formatManager.registerBasicFormats();
 
-	menuBar = std::make_unique<AccessibleMenuBar>(this, this, &darkLAF);    addAndMakeVisible(menuBar.get());
+	menuBar = std::make_unique<AccessibleMenuBar>(this, this, &darkLAF);
+	addAndMakeVisible(menuBar.get());
 	if (menuBar) {
 		menuBar->setBounds(0, 0, getWidth(), 30); // Slightly taller for 20pt text
 	}
@@ -20,33 +20,78 @@ MainComponent::MainComponent()
 	addKeyListener(this);
 	juce::MessageManager::callAsync([this]() { grabKeyboardFocus(); });
 	setAudioChannels(0, 2);
-	// ---- Gamepad mapping (new) ----
+
+	// ---- Gamepad mapping ----
 	gamepad.onButtonDown = [this](SDL_GameControllerButton b)
 		{
 			switch (b)
 			{
-			case SDL_CONTROLLER_BUTTON_A:             togglePlayback(); gamepad.tick(); break;  // Cross
-			case SDL_CONTROLLER_BUTTON_X:             announceTime();   break;                  // Square
-			case SDL_CONTROLLER_BUTTON_Y:             announceEffectsStatus(); break;           // Triangle
-			case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  performUndo();    break;                  // L1
-			case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: performRedo();    break;                  // R1
+			case SDL_CONTROLLER_BUTTON_A: // Cross
+				togglePlayback();
+				gamepad.tick();
+				break;
+			case SDL_CONTROLLER_BUTTON_X: // Square   
+				announceTime();
+				break;
+			case SDL_CONTROLLER_BUTTON_Y: // Triangle        
+				announceEffectsStatus();
+				break;
+			case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: // L1
+				performUndo();
+				break;
+			case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: // R1
+				performRedo();
+				break;
 			case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-				transportSource.setPosition(juce::jmax(0.0, transportSource.getCurrentPosition() - 5.0));
-				gamepad.tick();
+			{
+				double currentPos = transportSource.getCurrentPosition();
+				double newPos = currentPos - 5.0;
+
+				if (newPos < 0.0)
+				{
+					transportSource.setPosition(0.0);
+					gamepad.doubleTick();
+				}
+				else
+				{
+					transportSource.setPosition(newPos);
+					gamepad.tick();
+				}
 				break;
+			}
+
 			case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-				transportSource.setPosition(transportSource.getCurrentPosition() + 5.0);
-				gamepad.tick();
+			{
+				double currentPos = transportSource.getCurrentPosition();
+				double newPos = currentPos + 5.0;
+				double length = transportSource.getLengthInSeconds();
+
+				if (length > 0.0 && newPos >= length)
+				{
+					transportSource.setPosition(length);
+					gamepad.doubleTick();
+				}
+				else
+				{
+					transportSource.setPosition(newPos);
+					gamepad.tick();
+				}
 				break;
-			case SDL_CONTROLLER_BUTTON_START:         openCropDialog(true); break;
+			}
+			case SDL_CONTROLLER_BUTTON_START:
+				openCropDialog(true);
+				break;
 			default: break;
 			}
 		};
+
 	startTimerHz(60);
 }
 
 MainComponent::~MainComponent()
 {
+	gamepad.onButtonDown = nullptr;   // new: no callbacks during teardown
+
 	// 1. Stop the audio first so no callbacks try to repaint while we are dying
 	shutdownAudio();
 

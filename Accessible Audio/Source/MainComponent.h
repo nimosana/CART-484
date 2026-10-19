@@ -141,5 +141,7 @@ private:
 	void applyEQToBuffer(float* data, int numSamples, int channel);
 	void drawEQSliders(juce::Graphics& g, juce::Rectangle<int> area);
 
+	GamepadManager gamepad;   // <-- new, must be inside the class
+
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

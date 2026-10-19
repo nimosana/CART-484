@@ -33,6 +33,7 @@ public:
 
 	~GamepadManager() override
 	{
+		*aliveFlag = false;
 		stopTimer();
 		closePad();
 		SDL_Quit();
@@ -51,9 +52,30 @@ public:
 	}
 
 	// Handy named patterns that work as non-visual / non-audio feedback.
-	void tick() { rumble(0.0f, 0.5f, 30); }   // small click
-	void bump() { rumble(0.6f, 0.2f, 120); }   // e.g. "start/end of file"
+	void tick() { rumble(1.0f, 1.0f, 75); }   // small click
+	void bump() { rumble(1.0f, 1.0f, 200); }   // e.g. "start/end of file"
 	void warning() { rumble(1.0f, 1.0f, 300); }   // e.g. "nothing to undo"
+
+	struct Pulse { float low; float high; int ms; int gapAfterMs; };
+
+	// Plays a sequence of pulses, e.g. playPattern({ {0,0.6f,40,60}, {0,0.6f,40,0} });
+	void playPattern(std::initializer_list<Pulse> pulses)
+	{
+		int startAt = 0;
+		for (const auto& p : pulses)
+		{
+			juce::Timer::callAfterDelay(startAt, [this, alive = aliveFlag, p]
+				{
+					if (*alive)                       // object may have been destroyed
+						rumble(p.low, p.high, p.ms);
+				});
+			startAt += p.ms + p.gapAfterMs;
+		}
+	}
+
+	// Ready-made patterns
+	void doubleTick() { playPattern({ {1.0f, 1.0f, 75, 75}, {1.0f, 1.0f, 75, 0} }); }
+	void doubleBump() { playPattern({ {0.7f, 0.3f, 120, 80}, {0.7f, 0.3f, 120, 0} }); }
 
 	void setLightbar(juce::Colour c)
 	{
@@ -62,6 +84,7 @@ public:
 	}
 
 private:
+	std::shared_ptr<bool> aliveFlag = std::make_shared<bool>(true);
 	void timerCallback() override
 	{
 		SDL_Event e;
