@@ -84,6 +84,7 @@ public:
 	}
 
 private:
+
 	std::shared_ptr<bool> aliveFlag = std::make_shared<bool>(true);
 	void timerCallback() override
 	{

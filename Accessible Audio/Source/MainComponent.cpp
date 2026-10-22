@@ -21,28 +21,42 @@ MainComponent::MainComponent()
 	juce::MessageManager::callAsync([this]() { grabKeyboardFocus(); });
 	setAudioChannels(0, 2);
 
-	// ---- Gamepad mapping ----
+	// ---- Gamepad mapping: PS5 DualSense controller ----
 	gamepad.onButtonDown = [this](SDL_GameControllerButton b)
 		{
 			switch (b)
 			{
-			case SDL_CONTROLLER_BUTTON_A: // Cross
+				// ---- Face buttons ----
+
+			case SDL_CONTROLLER_BUTTON_A: // Cross (✕)
 				togglePlayback();
 				gamepad.tick();
 				break;
-			case SDL_CONTROLLER_BUTTON_X: // Square   
+
+			case SDL_CONTROLLER_BUTTON_B: // Circle (○)
+				toggleHighShelf();
+				break;
+
+			case SDL_CONTROLLER_BUTTON_X: // Square (□)
 				announceTime();
 				break;
-			case SDL_CONTROLLER_BUTTON_Y: // Triangle        
+
+			case SDL_CONTROLLER_BUTTON_Y: // Triangle (△)
 				announceEffectsStatus();
 				break;
-			case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: // L1
-				performUndo();
+
+
+				// ---- D-pad ----
+
+			case SDL_CONTROLLER_BUTTON_DPAD_UP: // D-pad Up
+				// TODO: Assign action
 				break;
-			case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: // R1
-				performRedo();
+
+			case SDL_CONTROLLER_BUTTON_DPAD_DOWN: // D-pad Down
+				// TODO: Assign action
 				break;
-			case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+
+			case SDL_CONTROLLER_BUTTON_DPAD_LEFT: // D-pad Left
 			{
 				double currentPos = transportSource.getCurrentPosition();
 				double newPos = currentPos - 5.0;
@@ -60,7 +74,7 @@ MainComponent::MainComponent()
 				break;
 			}
 
-			case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+			case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: // D-pad Right
 			{
 				double currentPos = transportSource.getCurrentPosition();
 				double newPos = currentPos + 5.0;
@@ -78,10 +92,76 @@ MainComponent::MainComponent()
 				}
 				break;
 			}
-			case SDL_CONTROLLER_BUTTON_START:
+
+
+			// ---- Shoulder buttons ----
+
+			case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: // L1
+				performUndo();
+				break;
+
+			case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: // R1
+				performRedo();
+				break;
+
+
+				// ---- Stick clicks ----
+
+			case SDL_CONTROLLER_BUTTON_LEFTSTICK: // L3 (press left stick)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_RIGHTSTICK: // R3 (press right stick)
+				// TODO: Assign action
+				break;
+
+
+				// ---- Center / system buttons ----
+
+			case SDL_CONTROLLER_BUTTON_BACK: // Create button (left of touchpad)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_START: // Options button (right of touchpad)
 				openCropDialog(true);
 				break;
-			default: break;
+
+			case SDL_CONTROLLER_BUTTON_GUIDE: // PS button
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_TOUCHPAD: // Touchpad click
+				// TODO: Assign action
+				break;
+
+
+				// ---- Additional controller buttons ----
+
+			case SDL_CONTROLLER_BUTTON_MISC1: // Miscellaneous button (often Mute)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_PADDLE1: // Rear paddle 1 (supported controllers)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_PADDLE2: // Rear paddle 2 (supported controllers)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_PADDLE3: // Rear paddle 3 (supported controllers)
+				// TODO: Assign action
+				break;
+
+			case SDL_CONTROLLER_BUTTON_PADDLE4: // Rear paddle 4 (supported controllers)
+				// TODO: Assign action
+				break;
+
+
+				// ---- Unmapped / unsupported button ----
+
+			default:
+				break;
 			}
 		};
 

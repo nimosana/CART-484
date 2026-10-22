@@ -25,6 +25,16 @@ public:
 
 	// Keyboard
 	bool keyPressed(const juce::KeyPress& key, juce::Component*) override;
+	void toggleGainEditMode();
+	void toggleLowShelf();
+	void toggleLowShelfEdit();
+	void toggleHighShelf();
+	void toggleFadeIn();
+	void toggleFadeOut();
+	void toggleMidFade();
+	void toggleEqEdit();
+	bool checkIfOpenFile(bool, bool);
+
 
 	// Mouse (EQ dragging) can make vytautas lose keyboard focus
 	//void mouseDown(const juce::MouseEvent& e) override;
