@@ -196,76 +196,25 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
 		// Ctrl+H: enter/exit high shelf frequency edit mode
 		if (key.getKeyCode() == 'h' || key.getKeyCode() == 'H')
 		{
-			bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
-				lowFreqEditMode || eqEditMode;
-			bool targetState = anyOther ? true : !highFreqEditMode;
-			if (targetState && !highPassEnabled)
-			{
-				juce::AccessibilityHandler::postAnnouncement("High shelf filter is off. Press H to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
-				return true;
-			}
-			gainEditMode = lowFreqEditMode = fadeInEditMode = fadeOutEditMode = eqEditMode = false;
-			highFreqEditMode = targetState;
-			juce::AccessibilityHandler::postAnnouncement(
-				highFreqEditMode ? "High shelf frequency edit mode. Use up and down arrows to change frequency. Currently " + juce::String((int)highShelfFreq) + " Hz." : "High shelf frequency edit mode off.",
-				juce::AccessibilityHandler::AnnouncementPriority::high);
-			repaint();
+			toggleHighShelfEdit();
 			return true;
 		}
 		// Ctrl+Q: enter/exit fade-in duration edit mode
 		if (key.getKeyCode() == 'q' || key.getKeyCode() == 'Q')
 		{
-			bool anyOther = gainEditMode || fadeOutEditMode ||
-				lowFreqEditMode || highFreqEditMode || eqEditMode;
-			bool targetState = anyOther ? true : !fadeInEditMode;
-			if (targetState && !fadeInEnabled)
-			{
-				juce::AccessibilityHandler::postAnnouncement("Fade in is off. Press Q to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
-				return true;
-			}
-			gainEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
-			fadeInEditMode = targetState;
-			juce::AccessibilityHandler::postAnnouncement(
-				fadeInEditMode ? "Fade in duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeInDuration, 1) + " seconds." : "Fade in duration edit mode off.",
-				juce::AccessibilityHandler::AnnouncementPriority::high);
-			repaint();
+			toggleFadeInEdit();
 			return true;
 		}
 		// Ctrl+W: enter/exit fade-out duration edit mode
 		if (key.getKeyCode() == 'w' || key.getKeyCode() == 'W')
 		{
-			bool anyOther = gainEditMode || fadeInEditMode ||
-				lowFreqEditMode || highFreqEditMode || eqEditMode;
-			bool targetState = anyOther ? true : !fadeOutEditMode;
-			if (targetState && !fadeOutEnabled)
-			{
-				juce::AccessibilityHandler::postAnnouncement("Fade out is off. Press W to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
-				return true;
-			}
-			gainEditMode = fadeInEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
-			fadeOutEditMode = targetState;
-			juce::AccessibilityHandler::postAnnouncement(
-				fadeOutEditMode ? "Fade out duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeOutDuration, 1) + " seconds." : "Fade out duration edit mode off.",
-				juce::AccessibilityHandler::AnnouncementPriority::high);
-			repaint();
+			toggleFadeOutEdit();
 			return true;
 		}
 		// Ctrl+M: enter/exit mid-fade edit mode
 		if (key.getKeyCode() == 'm' || key.getKeyCode() == 'M')
 		{
-			if (!midFadeEditMode && !midFadeEnabled)
-			{
-				juce::AccessibilityHandler::postAnnouncement("Mid-fade is off. Press M at the desired position to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
-				return true;
-			}
-			gainEditMode = fadeInEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
-			midFadeEditMode = !midFadeEditMode;
-			juce::AccessibilityHandler::postAnnouncement(
-				midFadeEditMode
-				? "Mid-fade edit mode. Shift + Left and Right arrows adjust position by 0.1 seconds. Ctrl + Shift + Left and Right arrows adjust position by 1 second. Up and Down arrows change duration. Centre at " + formatTime(midFadeCenter) + ", duration " + juce::String(midFadeDuration, 1) + " seconds."
-				: "Mid-fade edit mode off.",
-				juce::AccessibilityHandler::AnnouncementPriority::high);
-			repaint();
+			toggleMidFadeEdit();
 			return true;
 		}
 		if (key.getKeyCode() == juce::KeyPress::homeKey)
@@ -582,6 +531,22 @@ void MainComponent::toggleHighShelf() {
 	highShelfFilter[1].reset();
 	repaint();
 }
+void MainComponent::toggleHighShelfEdit() {
+	bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
+		lowFreqEditMode || eqEditMode;
+	bool targetState = anyOther ? true : !highFreqEditMode;
+	if (targetState && !highPassEnabled)
+	{
+		juce::AccessibilityHandler::postAnnouncement("High shelf filter is off. Press H to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
+		return;
+	}
+	gainEditMode = lowFreqEditMode = fadeInEditMode = fadeOutEditMode = eqEditMode = false;
+	highFreqEditMode = targetState;
+	juce::AccessibilityHandler::postAnnouncement(
+		highFreqEditMode ? "High shelf frequency edit mode. Use up and down arrows to change frequency. Currently " + juce::String((int)highShelfFreq) + " Hz." : "High shelf frequency edit mode off.",
+		juce::AccessibilityHandler::AnnouncementPriority::high);
+	repaint();
+}
 void MainComponent::toggleFadeIn() {
 	saveUndoState("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
 	logEffect("Fade in " + juce::String(!fadeInEnabled ? "on" : "off"));
@@ -593,6 +558,23 @@ void MainComponent::toggleFadeIn() {
 		juce::AccessibilityHandler::AnnouncementPriority::high);
 	repaint();
 }
+void MainComponent::toggleFadeInEdit() {
+	bool anyOther = gainEditMode || fadeOutEditMode ||
+		lowFreqEditMode || highFreqEditMode || eqEditMode;
+	bool targetState = anyOther ? true : !fadeInEditMode;
+	if (targetState && !fadeInEnabled)
+	{
+		juce::AccessibilityHandler::postAnnouncement("Fade in is off. Press Q to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
+		return;
+	}
+	gainEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
+	fadeInEditMode = targetState;
+	juce::AccessibilityHandler::postAnnouncement(
+		fadeInEditMode ? "Fade in duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeInDuration, 1) + " seconds." : "Fade in duration edit mode off.",
+		juce::AccessibilityHandler::AnnouncementPriority::high);
+	repaint();
+}
+
 void MainComponent::toggleFadeOut() {
 	saveUndoState("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
 	logEffect("Fade out " + juce::String(!fadeOutEnabled ? "on" : "off"));
@@ -601,6 +583,22 @@ void MainComponent::toggleFadeOut() {
 		fadeOutEnabled
 		? "Fade out on. " + juce::String(fadeOutDuration, 1) + " seconds. Press Ctrl + W to edit duration."
 		: "Fade out off.",
+		juce::AccessibilityHandler::AnnouncementPriority::high);
+	repaint();
+}
+void MainComponent::toggleFadeOutEdit() {
+	bool anyOther = gainEditMode || fadeInEditMode ||
+		lowFreqEditMode || highFreqEditMode || eqEditMode;
+	bool targetState = anyOther ? true : !fadeOutEditMode;
+	if (targetState && !fadeOutEnabled)
+	{
+		juce::AccessibilityHandler::postAnnouncement("Fade out is off. Press W to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
+		return;
+	}
+	gainEditMode = fadeInEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
+	fadeOutEditMode = targetState;
+	juce::AccessibilityHandler::postAnnouncement(
+		fadeOutEditMode ? "Fade out duration edit mode. Use up and down arrows to change duration. Currently " + juce::String(fadeOutDuration, 1) + " seconds." : "Fade out duration edit mode off.",
 		juce::AccessibilityHandler::AnnouncementPriority::high);
 	repaint();
 }
@@ -626,6 +624,21 @@ void MainComponent::toggleMidFade() {
 	}
 	repaint();
 }
+void MainComponent::toggleMidFadeEdit() {
+	if (!midFadeEditMode && !midFadeEnabled)
+	{
+		juce::AccessibilityHandler::postAnnouncement("Mid-fade is off. Press M at the desired position to enable it first.", juce::AccessibilityHandler::AnnouncementPriority::high);
+		return;
+	}
+	gainEditMode = fadeInEditMode = fadeOutEditMode = lowFreqEditMode = highFreqEditMode = eqEditMode = false;
+	midFadeEditMode = !midFadeEditMode;
+	juce::AccessibilityHandler::postAnnouncement(
+		midFadeEditMode
+		? "Mid-fade edit mode. Shift + Left and Right arrows adjust position by 0.1 seconds. Ctrl + Shift + Left and Right arrows adjust position by 1 second. Up and Down arrows change duration. Centre at " + formatTime(midFadeCenter) + ", duration " + juce::String(midFadeDuration, 1) + " seconds."
+		: "Mid-fade edit mode off.",
+		juce::AccessibilityHandler::AnnouncementPriority::high);
+	repaint();
+}
 void MainComponent::toggleEqEdit() {
 	bool anyOther = gainEditMode || fadeInEditMode || fadeOutEditMode ||
 		lowFreqEditMode || highFreqEditMode;
@@ -642,6 +655,7 @@ void MainComponent::toggleEqEdit() {
 		juce::AccessibilityHandler::AnnouncementPriority::high);
 	repaint();
 }
+
 bool MainComponent::checkIfOpenFile(bool isCommand, bool altDown) {
 	if (isCommand && !altDown && readerSource == nullptr && memorySource == nullptr && transportSource.getLengthInSeconds() <= 0.0)
 	{

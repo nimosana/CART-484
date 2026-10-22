@@ -29,9 +29,14 @@ public:
 	void toggleLowShelf();
 	void toggleLowShelfEdit();
 	void toggleHighShelf();
+	void toggleHighShelfEdit();
 	void toggleFadeIn();
+	void toggleFadeInEdit();
 	void toggleFadeOut();
+	void toggleFadeOutEdit();
 	void toggleMidFade();
+	void toggleMidFadeEdit();
+	void toggleEq();
 	void toggleEqEdit();
 	bool checkIfOpenFile(bool, bool);
 
